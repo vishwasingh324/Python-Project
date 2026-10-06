@@ -15,20 +15,146 @@ import os
 import re
 import sys
 import webbrowser
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote_plus, unquote, urlsplit
+
+import conversation
 
 ROOT = Path(__file__).resolve().parent
 STATIC_ROOT = ROOT / "static"
 MAX_REQUEST_BYTES = 16_384
 MAX_COMMAND_LENGTH = 1_000
+MAX_SESSION_LENGTH = 128
 
 
 def _clean_command(command: str) -> str:
     """Normalize text and strip the optional Alexa wake word."""
     command = re.sub(r"\balexa\b", " ", command, flags=re.IGNORECASE)
+    # Speech and quick typing often drop apostrophes ("whats the time"), so
+    # remove them before matching and write patterns without them.
+    command = command.replace("'", "").replace("\u2019", "")
     return " ".join(command.lower().split()).strip(" ,.!?\t\n")
+
+
+# Conversation patterns. These are anchored so that a greeting only matches on
+# its own ("hello") and never swallows a real command ("hello, open youtube"
+# still opens YouTube). Patterns are written without apostrophes because
+# _clean_command strips them.
+_GREETING = re.compile(
+    r"^(?:good (?:morning|afternoon|evening)|hello|hi+|hey+|yo|hola|namaste|what(?:s| is) up)"
+    r"(?: there| alexa| assistant| buddy| friend)?$"
+)
+_GOODBYE = re.compile(
+    r"^(?:bye+(?: bye)?|good ?bye|see (?:you|ya)|good night|catch you later|i(?:m| am) done)$"
+)
+_HOW_ARE_YOU = re.compile(r"\bhow (?:are you|are things|is it going|you doing|are you doing)\b")
+_IDENTITY = re.compile(r"\b(?:who are you|what(?:s| is) your name|your name)\b")
+_THANKS = re.compile(
+    r"^(?:thanks|thank you|thankyou|thanx|thx|ty|great|awesome|nice|cool)"
+    r"(?: a lot| so much| very much| man| bro)?$"
+)
+_HELP = re.compile(
+    r"^(?:help|help me|commands?|what can you do|what do you do|"
+    r"what can i (?:do|say|ask)|show me (?:the )?commands?)$"
+)
+_TIME = re.compile(
+    r"\b(?:what(?:s| is) the time|what time is it|current time|time now|tell me the time|clock)\b"
+)
+_DATE = re.compile(
+    r"\b(?:what(?:s| is) the date|what(?:s| is) todays? date|what day is it|"
+    r"todays? date|current date|what(?:s| is) the day)\b"
+)
+
+
+_HELP_REPLY = (
+    "I can open sites and search for you. Try: 'open YouTube', "
+    "'play lofi beats on YouTube', 'search for Python tutorials', 'open Gmail', "
+    "'open Google Classroom', 'open GitHub', or ask me for the time. "
+    "Say 'stop' to end the session."
+)
+
+# Single source of truth for what the assistant can do. The frontend renders
+# its quick-launch buttons, command cards and suggestions from /api/commands,
+# so the UI can never drift away from what the backend actually understands.
+# A test asserts every offered example resolves to a real intent.
+CAPABILITIES: tuple[dict[str, object], ...] = (
+    {
+        "id": "launch",
+        "label": "Open a site",
+        "hint": "Jump straight to a site I already know.",
+        "items": (
+            {"label": "YouTube", "command": "open youtube", "icon": "play"},
+            {"label": "Google", "command": "open google", "icon": "search"},
+            {"label": "Gmail", "command": "open gmail", "icon": "mail"},
+            {"label": "Google Drive", "command": "open google drive", "icon": "drive"},
+            {"label": "Google Classroom", "command": "open google classroom", "icon": "book"},
+            {"label": "GitHub", "command": "open github", "icon": "code"},
+            {"label": "WhatsApp", "command": "open whatsapp", "icon": "chat"},
+            {"label": "Claude", "command": "open claude ai", "icon": "spark"},
+            {"label": "Gemini", "command": "open gemini", "icon": "spark"},
+            {"label": "ChatGPT", "command": "open chatgpt", "icon": "spark"},
+            {"label": "Instagram", "command": "open instagram", "icon": "camera"},
+        ),
+    },
+    {
+        "id": "play",
+        "label": "Play on YouTube",
+        "hint": "Name a song or topic and I search YouTube for it.",
+        "items": (
+            {"label": "lofi beats", "command": "play lofi beats on youtube", "icon": "play"},
+            {"label": "study music", "command": "play study music on youtube", "icon": "play"},
+            {"label": "workout playlist", "command": "play workout playlist on youtube", "icon": "play"},
+        ),
+    },
+    {
+        "id": "search",
+        "label": "Search the web",
+        "hint": "Look something up without opening a tab first.",
+        "items": (
+            {"label": "Python tutorials", "command": "search for python tutorials", "icon": "search"},
+            {"label": "weather in Ahmedabad", "command": "search for weather in ahmedabad", "icon": "search"},
+            {"label": "best study playlists", "command": "search for best study playlists", "icon": "search"},
+        ),
+    },
+    {
+        "id": "chat",
+        "label": "Just talk",
+        "hint": "Real back-and-forth: feelings, jokes, facts, memory of this chat.",
+        "items": (
+            {"label": "Say hello", "command": "hello", "icon": "wave"},
+            {"label": "What can you do", "command": "help", "icon": "info"},
+            {"label": "Tell me a joke", "command": "tell me a joke", "icon": "spark"},
+            {"label": "I'm tired", "command": "i am tired", "icon": "chat"},
+            {"label": "Flip a coin", "command": "flip a coin", "icon": "play"},
+            {"label": "Do some maths", "command": "what is 12 * 8", "icon": "info"},
+            {"label": "The time", "command": "what time is it", "icon": "clock"},
+            {"label": "Today's date", "command": "what is todays date", "icon": "calendar"},
+            {"label": "What did I ask", "command": "what did i ask", "icon": "chat"},
+        ),
+    },
+)
+
+
+def capabilities() -> dict[str, object]:
+    """Return a JSON-friendly description of the supported commands."""
+    return {
+        "categories": [
+            {
+                "id": category["id"],
+                "label": category["label"],
+                "hint": category["hint"],
+                "items": [dict(item) for item in category["items"]],
+            }
+            for category in CAPABILITIES
+        ]
+    }
+
+
+def _time_and_date(now: datetime) -> str:
+    time_text = now.strftime("%I:%M %p").lstrip("0")
+    return f"{time_text} on {now:%A}, {now.day} {now:%B %Y}"
 
 
 def _action(label: str, url: str) -> dict[str, str]:
@@ -77,6 +203,63 @@ def process_command(command: str) -> dict[str, object]:
             "Goodbye. I'm here whenever you want to start again.",
             status="stopped",
             should_continue=False,
+        )
+
+    # Small talk first: these are anchored matches, so real commands such as
+    # "hello, open youtube" still fall through to the action handlers below.
+    if _GOODBYE.match(normalized):
+        return _response(
+            original,
+            "Goodbye. I'm here whenever you want to start again.",
+            status="stopped",
+            should_continue=False,
+        )
+
+    if _GREETING.match(normalized):
+        return _response(
+            original,
+            "Hello! How can I help you? You can say things like 'open YouTube' "
+            "or 'search for Python tutorials', or just ask 'help'.",
+            status="smalltalk",
+        )
+
+    if _HOW_ARE_YOU.search(normalized):
+        return _response(
+            original,
+            "I'm running well, thank you for asking. What can I do for you?",
+            status="smalltalk",
+        )
+
+    if _IDENTITY.search(normalized):
+        return _response(
+            original,
+            "I'm Alexa, your voice assistant in this browser. I can open sites "
+            "and run searches for you.",
+            status="smalltalk",
+        )
+
+    if _THANKS.match(normalized):
+        return _response(
+            original,
+            "You're welcome! Anything else I can do?",
+            status="smalltalk",
+        )
+
+    if _HELP.match(normalized):
+        return _response(original, _HELP_REPLY, status="help")
+
+    if _TIME.search(normalized):
+        return _response(
+            original,
+            f"It's {_time_and_date(datetime.now())}.",
+            status="time",
+        )
+
+    if _DATE.search(normalized):
+        return _response(
+            original,
+            f"Today is {datetime.now():%A}, {datetime.now().day} {datetime.now():%B %Y}.",
+            status="time",
         )
 
     if "open google classroom" in normalized:
@@ -167,9 +350,28 @@ def process_command(command: str) -> dict[str, object]:
 
     return _response(
         original,
-        "Command not recognized. Try one of the quick commands or ask me to search the web.",
+        "I don't know that one yet. Try 'open YouTube', 'play lofi beats on YouTube', "
+        "'search for Python tutorials', or say 'help' to hear what I can do.",
         status="unknown",
     )
+
+
+# One engine for the process: it owns the per-session conversation memory.
+ENGINE = conversation.ConversationEngine(
+    intent_handler=process_command,
+    normalize=_clean_command,
+    llm=conversation.LlmChat.from_env(),
+)
+
+
+def handle_command(command: str, session_id: str | None = None) -> dict[str, object]:
+    """Conversational entry point used by the HTTP API (keeps session memory)."""
+    return ENGINE.respond(command, session_id)
+
+
+def reset_session(session_id: str | None = None) -> None:
+    """Forget a conversation, e.g. when the user clears the log."""
+    ENGINE.sessions.reset(session_id)
 
 
 class AssistantRequestHandler(BaseHTTPRequestHandler):
@@ -200,6 +402,10 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"status": "ok", "assistant": "Alexa"})
             return
 
+        if request_path == "/api/commands":
+            self._send_json(capabilities())
+            return
+
         relative_path = unquote(request_path).lstrip("/") or "index.html"
         target = (STATIC_ROOT / relative_path).resolve()
         static_root = STATIC_ROOT.resolve()
@@ -219,7 +425,8 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
         )
 
     def do_POST(self) -> None:  # noqa: N802 - method name required by BaseHTTPRequestHandler
-        if urlsplit(self.path).path != "/api/command":
+        route = urlsplit(self.path).path
+        if route not in {"/api/command", "/api/reset"}:
             self._send_json({"error": "Not found"}, 404)
             return
 
@@ -233,11 +440,26 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            raw = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
+            payload = json.loads(raw or "{}")
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._send_json({"error": "Expected a JSON request body"}, 400)
             return
-        if not isinstance(payload, dict) or not isinstance(payload.get("command"), str):
+        if not isinstance(payload, dict):
+            self._send_json({"error": "Expected a JSON object"}, 400)
+            return
+
+        session_id = payload.get("session")
+        if session_id is not None and (not isinstance(session_id, str) or len(session_id) > MAX_SESSION_LENGTH):
+            self._send_json({"error": "The 'session' field must be a short string"}, 400)
+            return
+
+        if route == "/api/reset":
+            reset_session(session_id)
+            self._send_json({"status": "ok", "session": session_id or "anonymous"})
+            return
+
+        if not isinstance(payload.get("command"), str):
             self._send_json({"error": "The 'command' field must be a string"}, 400)
             return
 
@@ -246,13 +468,18 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "Command is too long"}, 422)
             return
 
-        self._send_json(process_command(command))
+        self._send_json(handle_command(command, session_id))
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
     """Start the frontend and API on one origin."""
     server = ThreadingHTTPServer((host, port), AssistantRequestHandler)
-    print(f"Backend assistant is running at http://{host}:{port}")
+    # 0.0.0.0 is a "listen on every interface" bind address; it is not a
+    # browsable address, so show something clickable instead.
+    display_host = "localhost" if host in {"0.0.0.0", "::", ""} else host
+    print(f"Backend assistant is listening on {host}:{port}")
+    print(f"Open http://{display_host}:{port} in a browser on this machine.")
+    print("(In a hosted sandbox, open the forwarded preview link for this port instead.)")
     print("Press Ctrl+C to stop the server.")
     try:
         server.serve_forever()
