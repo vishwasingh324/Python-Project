@@ -1,8 +1,10 @@
 /*
  * Frontend smoke test — loads static/index.html + static/app.js in a real DOM
  * (jsdom) with the backend HTTP API mocked, then checks that the UI wires up,
- * renders the capabilities from /api/commands, sends commands, and explains
- * voice failures correctly (including the embedded-preview case).
+ * renders the capabilities from /api/commands, sends commands, opens the sites
+ * those commands ask for by itself (and falls back to a link when a pop-up
+ * blocker refuses), and explains voice failures correctly (including the
+ * embedded-preview case).
  *
  * Optional tooling: this is not part of the Python test suite because it needs
  * Node + jsdom. Run it when you change the frontend:
@@ -45,6 +47,16 @@ class FakeRecognition {
   stop() { if (this.onend) this.onend(); }
 }
 window.SpeechRecognition = FakeRecognition;
+
+// The app opens a commanded site by itself instead of offering a button, so
+// record every window.open and let the test flip the pop-up blocker on.
+const openedTabs = [];
+let popupsBlocked = false;
+window.open = (url, target) => {
+  openedTabs.push({ url, target });
+  if (popupsBlocked) return null;
+  return { opener: {}, closed: false, focus() {} };
+};
 
 const calls = [];
 let lastSession = null;
@@ -132,8 +144,13 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   doc.getElementById("command-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
   await wait(150);
   check("command produced two bubbles", doc.querySelectorAll("#conversation .message").length === 2);
-  const link = doc.querySelector("#conversation .message-action");
-  check("action link uses https", !!link && link.getAttribute("href").startsWith("https://"));
+  // The command opens the site on its own — there is no button to press.
+  check("the app opened the site by itself", openedTabs.length === 1 && openedTabs[0].url === "https://www.youtube.com");
+  check("the site opened in a new tab", !!openedTabs[0] && openedTabs[0].target === "_blank");
+  check("no open button is left in the bubble", !doc.querySelector("#conversation .message-action"));
+  const openedNote = doc.querySelector("#conversation .message-assistant:last-of-type .message-note");
+  check("the bubble says the site is open", !!openedNote && /new tab/i.test(openedNote.textContent));
+  check("the action tag reads opened", /opened/i.test(doc.querySelector("#conversation .message-assistant:last-of-type .message-tags").textContent));
   check("count badge updated", doc.getElementById("count-badge").textContent === "1");
 
   click("#cap-grid .cap-item");
@@ -156,6 +173,7 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   check("diagnostics report the error", /not-allowed/i.test(doc.getElementById("check-list").textContent));
 
   // normal conversation: a plain sentence gets a prose reply, not a dead end
+  const tabsBeforeChat = openedTabs.length;
   input.value = "tell me a joke";
   doc.getElementById("command-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
   await wait(150);
@@ -163,14 +181,30 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   check("conversational command gets a prose reply", !!chatReply && chatReply.textContent.length > 10);
   check("chat status is labelled for the user", doc.querySelector("#conversation .message-assistant:last-of-type .tag").textContent === "chat");
   check("commands carry a session id", typeof lastSession === "string" && lastSession.length > 0);
+  check("plain chat opens nothing", openedTabs.length === tabsBeforeChat);
 
-  // follow-up memory: "open it" reuses the earlier link
+  // follow-up memory: "open it" reuses the earlier link — and opens it, too
+  const tabsBeforeFollow = openedTabs.length;
   input.value = "open it";
   doc.getElementById("command-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
   await wait(150);
-  const followLink = doc.querySelector("#conversation .message-assistant:last-of-type .message-action");
-  check("follow-up reuses the remembered link", !!followLink && followLink.getAttribute("href") === "https://www.youtube.com");
+  check(
+    "follow-up reopens the remembered link",
+    openedTabs.length === tabsBeforeFollow + 1 && openedTabs[openedTabs.length - 1].url === "https://www.youtube.com"
+  );
+  check("follow-up needs no button either", !doc.querySelector("#conversation .message-assistant:last-of-type .message-action"));
   check("follow-up status is labelled", doc.querySelector("#conversation .message-assistant:last-of-type .tag").textContent === "follow-up");
+
+  // If a pop-up blocker refuses, the bubble falls back to a plain link rather
+  // than dropping the command on the floor.
+  popupsBlocked = true;
+  input.value = "open youtube";
+  doc.getElementById("command-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+  await wait(150);
+  popupsBlocked = false;
+  const fallbackLink = doc.querySelector("#conversation .message-assistant:last-of-type .message-action");
+  check("a blocked pop-up leaves a working link", !!fallbackLink && fallbackLink.getAttribute("href") === "https://www.youtube.com");
+  check("the blocked link is honest about why", !!fallbackLink && /pop-up blocked/i.test(fallbackLink.textContent));
 
   click("#clear-log");
   await wait(80);

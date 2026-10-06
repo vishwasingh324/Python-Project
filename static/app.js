@@ -4,6 +4,9 @@
      GET  /api/health    -> backend liveness
      GET  /api/commands  -> what the assistant understands (drives this UI)
      POST /api/command   -> { command } -> { reply, action, status, should_continue }
+   An action that comes back ("open YouTube", "search for …") is opened by this
+   page immediately in a new tab — the user never has to press a button to make
+   the command happen.
    Voice uses the browser's SpeechRecognition (Chrome/Edge) and reports exactly
    why it fails instead of blaming the user's permissions blindly.
    ========================================================================== */
@@ -154,6 +157,36 @@
     return svg;
   }
 
+  /* ─────────────────────── automatic app opening ───────────────────────
+     When the backend answers with an action ("open YouTube", "search for …")
+     the page opens it straight away in a new tab. Saying "open YouTube" opens
+     YouTube — there is no "Open YouTube" button left to click afterwards.
+
+     Browsers only allow a page to open a tab while a key press or click is
+     still "fresh" (transient user activation); typing Enter, tapping a
+     suggestion chip or finishing a spoken command all count, so this works in
+     a normal tab. If a pop-up blocker or an embedded preview still refuses,
+     the bubble falls back to a plain link so the command never silently does
+     nothing. */
+  function isActionUrl(url) {
+    return typeof url === "string" && /^https:\/\//i.test(url);
+  }
+
+  function autoOpen(action) {
+    if (!action || !isActionUrl(action.url)) return null;
+    try {
+      // Opened without "noopener" on purpose: that flag makes every browser
+      // return null, which would look exactly like a blocked pop-up. Drop the
+      // back-reference by hand instead.
+      const handle = window.open(action.url, "_blank");
+      if (handle) {
+        try { handle.opener = null; } catch (_error) { /* cross-origin: already detached */ }
+        return "opened";
+      }
+    } catch (_error) { /* blocked, sandboxed or unsupported */ }
+    return "blocked";
+  }
+
   /* ───────────────────────────── conversation ───────────────────────────── */
   function appendMessage(role, text, options = {}) {
     els.emptyState.hidden = true;
@@ -193,21 +226,30 @@
       if (options.action) {
         const actionTag = document.createElement("span");
         actionTag.className = "tag";
-        actionTag.textContent = "link ready";
+        actionTag.textContent = options.opened === "opened" ? "opened" : "link ready";
         tags.append(actionTag);
       }
       main.append(tags);
     }
 
-    if (options.action && typeof options.action.url === "string" && /^https:\/\//i.test(options.action.url)) {
-      const link = document.createElement("a");
-      link.className = "message-action";
-      link.href = options.action.url;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.append(document.createTextNode(options.action.label || "Open link"));
-      link.append(svgEl(["M4 12 12 4M5 4h7v7"]));
-      main.append(link);
+    if (options.action && isActionUrl(options.action.url)) {
+      const label = options.action.label || "Open link";
+      if (options.opened === "opened") {
+        // Already on screen in its own tab — just say so, no button to press.
+        const note = document.createElement("p");
+        note.className = "message-note";
+        note.textContent = `${label} is open in a new tab.`;
+        main.append(note);
+      } else {
+        const link = document.createElement("a");
+        link.className = "message-action";
+        link.href = options.action.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.append(document.createTextNode(`${label} — pop-up blocked, open it here`));
+        link.append(svgEl(["M4 12 12 4M5 4h7v7"]));
+        main.append(link);
+      }
     }
 
     if (role !== "user") {
@@ -340,10 +382,17 @@
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Request failed (${response.status})`);
       removeTyping();
+      // Open the site as soon as the reply lands — still inside the user's
+      // key press / click, so the browser treats it as a real pop-up.
+      const opened = autoOpen(result.action);
       appendMessage("assistant", result.reply || "I'm ready for another command.", {
         action: result.action,
+        opened,
         status: statusLabels[result.status] || result.status,
       });
+      if (opened === "blocked") {
+        toast("Your browser blocked the new tab — use the link in the chat.");
+      }
       markHealthy();
       setStatus(result.status === "stopped" ? "stopped" : "ready");
     } catch (error) {

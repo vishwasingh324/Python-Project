@@ -402,6 +402,11 @@ body[data-state="listening"] .meter span { animation: bounce 0.9s ease-in-out in
 }
 .message-action:hover { background: rgba(124, 108, 245, 0.28); }
 .message-action svg { width: 13px; height: 13px; }
+/* The site opened by itself — this is a note, not something to press. */
+.message-note {
+  align-self: flex-start; margin-top: 2px; padding: 5px 10px; border-radius: 9px;
+  border: 1px dashed var(--line); color: var(--muted-2); font-size: 0.78rem;
+}
 .message-tools { display: flex; gap: 6px; }
 .mini-button {
   padding: 3px 9px; border-radius: 7px; border: 1px solid var(--line); background: transparent;

@@ -234,8 +234,10 @@ def _response(
 def process_command(command: str) -> dict[str, object]:
     """Interpret a supported command and return a frontend-friendly response.
 
-    External pages are returned as links instead of being opened on the server:
-    a browser-based backend cannot open a tab on the user's own device.
+    External pages are returned as actions instead of being opened on the
+    server: a browser-based backend cannot open a tab on the user's own device.
+    The frontend opens the URL by itself as soon as the reply arrives, so the
+    command happens without anyone pressing a button.
     """
     if not isinstance(command, str):
         command = ""
