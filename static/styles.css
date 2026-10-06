@@ -276,10 +276,13 @@ body[data-state="listening"] .meter span { animation: bounce 0.9s ease-in-out in
   max-width: 62ch; overflow-wrap: anywhere;
 }
 .status-fix {
-  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
-  margin-top: 6px; padding: 9px 13px; border-radius: var(--radius-sm);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+  margin-top: 6px; padding: 10px 14px; border-radius: var(--radius-sm);
   border: 1px solid rgba(251, 191, 36, 0.32); background: rgba(251, 191, 36, 0.08);
-  font-size: 0.83rem; color: #fcd34d; text-align: left; max-width: 70ch;
+  font-size: 0.83rem; color: #fcd34d; text-align: center; max-width: 70ch;
+}
+.status-fix-actions {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;
 }
 .inline-button {
   padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(251, 191, 36, 0.5);

@@ -32,6 +32,8 @@
     statusFix: $("status-fix"),
     statusFixText: $("status-fix-text"),
     openTab: $("open-tab"),
+    fixRetry: $("fix-retry"),
+    fixDictate: $("fix-dictate"),
     form: $("command-form"),
     input: $("command-input"),
     sendButton: $("send-button"),
@@ -85,6 +87,8 @@
     hasApi: false,
     embedded: false,
     secure: false,
+    isBrave: false,
+    forceFallbackLang: false,
     permission: "unknown",
     lastError: null,
   };
@@ -506,6 +510,12 @@
     voice.secure = window.isSecureContext === true || httpsPage || localHost;
     voice.ctor = window.SpeechRecognition || window.webkitSpeechRecognition || null;
     voice.hasApi = Boolean(voice.ctor);
+    if (typeof navigator !== "undefined" && navigator.brave && typeof navigator.brave.isBrave === "function") {
+      navigator.brave.isBrave().then((isB) => {
+        voice.isBrave = Boolean(isB);
+        voiceBadge();
+      }).catch(() => {});
+    }
   }
 
   function voiceBadge() {
@@ -571,10 +581,24 @@
       case "audio-capture":
         return { title: "No microphone available", text: "No input device was found, or another app is holding the microphone.", fix: null };
       case "network":
+        if (voice.isBrave) {
+          return {
+            title: "Speech service blocked by Brave",
+            text: "Brave blocks Google speech services by default. Enable “Use Google services for speech recognition” in brave://settings/extensions, or use OS voice typing.",
+            fix: "Brave disables Google speech recognition by default. Turn it on in brave://settings/extensions, open in a new tab, or use OS Voice Typing (Win+H / Mac Fn).",
+          };
+        }
+        if (voice.embedded) {
+          return {
+            title: "The speech service is unreachable",
+            text: "Chrome/Edge send audio to an online speech service, which can be restricted inside preview frames or offline. Open in a new tab, retry with English (US), or use OS voice typing.",
+            fix: "Speech service unreachable in this preview. Open in a new tab, check Brave settings if on Brave, or use OS Voice Typing (Win+H / Mac Fn).",
+          };
+        }
         return {
           title: "The speech service is unreachable",
-          text: "Chrome/Edge send audio to an online speech service, so voice needs an internet connection. Typing works fully offline.",
-          fix: null,
+          text: "Chrome/Edge send audio to an online speech service. If using Brave or an ad blocker, enable speech services; otherwise use OS voice typing or type below.",
+          fix: "Speech service unreachable. Check your internet connection or Brave settings (brave://settings/extensions). You can also use OS Voice Typing (Win+H / Mac Fn) directly in the box.",
         };
       case "no-speech":
         return { title: "I didn't hear anything", text: "Tap the microphone and speak a little closer to it.", fix: null };
@@ -600,10 +624,21 @@
     if (els.dialog.open) renderChecks();
   }
 
-  function buildRecognition() {
+  function buildRecognition(forceRecreate = false, useFallbackLang = false) {
     if (!voice.hasApi) return;
+    if (voice.recognition && !forceRecreate) return;
+    if (voice.recognition) {
+      try {
+        voice.recognition.onstart = null;
+        voice.recognition.onresult = null;
+        voice.recognition.onerror = null;
+        voice.recognition.onend = null;
+        voice.recognition.abort();
+      } catch (_e) { /* ignore */ }
+    }
     const recognition = new voice.ctor();
-    recognition.lang = navigator.language || "en-US";
+    const systemLang = navigator.language || "en-US";
+    recognition.lang = useFallbackLang || voice.forceFallbackLang ? "en-US" : systemLang;
     recognition.interimResults = true;
     recognition.continuous = false;
     recognition.maxAlternatives = 1;
@@ -640,6 +675,9 @@
       state.listening = false;
       els.micButton.setAttribute("aria-pressed", "false");
       els.micButton.setAttribute("aria-label", "Start voice command");
+      if (event.error === "network" && !voice.forceFallbackLang && (navigator.language || "").toLowerCase() !== "en-us") {
+        voice.forceFallbackLang = true;
+      }
       handleVoiceError(event.error);
     };
 
@@ -653,7 +691,7 @@
     voice.recognition = recognition;
   }
 
-  function startListening() {
+  function startListening(retryWithFallback = false) {
     if (!voice.hasApi) {
       const message = voice.secure
         ? "This browser has no speech recognition. Chrome or Edge supports it — typing works everywhere."
@@ -663,6 +701,7 @@
       openDiagnostics();
       return;
     }
+    buildRecognition(true, retryWithFallback);
     els.input.value = "";
     try {
       voice.recognition.start();
@@ -741,6 +780,24 @@
         : checkRow("ok", "No voice errors this session", "Nothing has failed yet.")
     );
 
+    rows.push(
+      typeof navigator !== "undefined" && navigator.onLine === false
+        ? checkRow("bad", "Network: offline", "Your browser is offline. Cloud speech recognition needs an internet connection. Typing works fully offline.")
+        : voice.lastError === "network"
+          ? checkRow("warn", "Speech service reachability", "The cloud speech service returned 'network'. If using Brave, enable Google speech in brave://settings/extensions; if using a VPN/ad-blocker, verify connection.")
+          : checkRow("ok", "Internet connection", "Online. Ready to reach speech services.")
+    );
+
+    if (voice.isBrave) {
+      rows.push(
+        checkRow("warn", "Brave browser detected", "Brave blocks Google speech services by default. Open brave://settings/extensions and turn on 'Use Google services for speech recognition'.")
+      );
+    }
+
+    rows.push(
+      checkRow("ok", "Offline voice alternative", "You can also use your operating system's built-in dictation: press Win+H (Windows) or Fn twice (Mac) with the command box focused.")
+    );
+
     els.checkList.replaceChildren(...rows);
   }
 
@@ -780,6 +837,8 @@
       `secure context: ${voice.secure}`,
       `SpeechRecognition: ${voice.hasApi}`,
       `mic permission: ${voice.permission}`,
+      `online: ${typeof navigator !== "undefined" ? navigator.onLine : "unknown"}`,
+      `is Brave: ${voice.isBrave}`,
       `last voice error: ${voice.lastError || "none"}`,
       `backend online: ${els.healthDot.classList.contains("online")}`,
       `browser: ${navigator.userAgent}`,
@@ -912,6 +971,18 @@
   els.testMic.addEventListener("click", testMicrophone);
   els.openTab.addEventListener("click", openInNewTab);
   els.openTab2.addEventListener("click", openInNewTab);
+  if (els.fixRetry) {
+    els.fixRetry.addEventListener("click", () => {
+      startListening(true);
+    });
+  }
+  if (els.fixDictate) {
+    els.fixDictate.addEventListener("click", () => {
+      revealConversation();
+      els.input.focus();
+      toast("Focused! Press Win+H (Windows) or Fn twice (Mac) to dictate.");
+    });
+  }
   els.copyReport.addEventListener("click", async () => {
     try {
       await navigator.clipboard.writeText(reportText());

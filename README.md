@@ -117,10 +117,21 @@ failing instead of blaming your permissions:
    cross-origin iframes (for example a live-preview panel) unless the embedding
    page opts in. If you see *"This embedded preview blocks the microphone"*, use
    the **Open in a new tab** button — voice works there.
-4. **An internet connection.** Chrome/Edge send audio to an online speech
-   service, so recognition needs network access even though the rest of the app is
-   offline. Opening links obviously needs network too — offline, the assistant
-   still *builds* the link and shows it.
+4. **An internet connection / speech service reachability.** Chrome/Edge send
+   audio to an online speech service, so recognition needs network access even
+   though the rest of the app is offline.
+   - **Brave Browser:** Brave disables Google speech recognition by default. Open
+     `brave://settings/extensions` and enable **"Use Google services for speech
+     recognition"**.
+   - **Preview frame:** If running inside an embedded preview iframe, click
+     **Open in a new tab** to bypass frame restrictions.
+   - **OS Voice Typing (Offline Alternative):** You can speak directly into the
+     command input using your operating system's built-in dictation without
+     cloud speech:
+     - **Windows:** Press `Win + H` while focused on the box.
+     - **macOS:** Press `Fn` twice (or your configured Dictation key).
+   - **Retry button:** The UI provides a "Retry microphone" button that cleans
+     up stale connection state and automatically falls back to `en-US`.
 5. **Permission granted** in the browser's address bar for the site.
 
 ## Tests

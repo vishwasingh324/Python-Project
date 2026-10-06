@@ -128,7 +128,11 @@
                   <p class="status-heard" id="status-heard" hidden></p>
                   <div class="status-fix" id="status-fix" hidden>
                     <span id="status-fix-text"></span>
-                    <button class="inline-button" id="open-tab" type="button">Open in a new tab</button>
+                    <div class="status-fix-actions" id="status-fix-actions">
+                      <button class="inline-button" id="fix-retry" type="button">Retry microphone</button>
+                      <button class="inline-button" id="open-tab" type="button">Open in a new tab</button>
+                      <button class="inline-button" id="fix-dictate" type="button">Voice typing (Win+H / Mac)</button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -169,7 +173,7 @@
                   </button>
                 </form>
                 <div class="helper-row">
-                  <span><kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> focus · <kbd>Esc</kbd> cancel</span>
+                  <span><kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> focus · <kbd>Win</kbd>+<kbd>H</kbd> / <kbd>Fn</kbd>×2 voice typing</span>
                   <span id="helper-right">Command API: <code>/api/command</code></span>
                 </div>
 
