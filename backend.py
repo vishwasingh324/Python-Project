@@ -69,10 +69,11 @@ _DATE = re.compile(
 
 
 _HELP_REPLY = (
-    "I can open sites and search for you. Try: 'open YouTube', "
-    "'play lofi beats on YouTube', 'search for Python tutorials', 'open Gmail', "
-    "'open Google Classroom', 'open GitHub', or ask me for the time. "
-    "Say 'stop' to end the session."
+    "I can open sites and search for you, one app at a time. Try: 'open YouTube', "
+    "or just the one-word keyword 'youtube', 'gmail', 'drive', 'classroom', "
+    "'github', 'whatsapp', 'claude', 'gemini', 'chatgpt', 'instagram' or 'google'. "
+    "You can also say 'play lofi beats on YouTube' or 'search for Python tutorials'. "
+    "Ask me for the time, or say 'stop' to end the session."
 )
 
 # Single source of truth for what the assistant can do. The frontend renders
@@ -83,7 +84,7 @@ CAPABILITIES: tuple[dict[str, object], ...] = (
     {
         "id": "launch",
         "label": "Open a site",
-        "hint": "Jump straight to a site I already know.",
+        "hint": "One app at a time: say \"open YouTube\" or just the one-word keyword \"youtube\".",
         "items": (
             {"label": "YouTube", "command": "open youtube", "icon": "play"},
             {"label": "Google", "command": "open google", "icon": "search"},
@@ -96,6 +97,11 @@ CAPABILITIES: tuple[dict[str, object], ...] = (
             {"label": "Gemini", "command": "open gemini", "icon": "spark"},
             {"label": "ChatGPT", "command": "open chatgpt", "icon": "spark"},
             {"label": "Instagram", "command": "open instagram", "icon": "camera"},
+            {"label": "Keyword: drive", "command": "drive", "icon": "drive"},
+            {"label": "Keyword: classroom", "command": "classroom", "icon": "book"},
+            {"label": "Keyword: gmail", "command": "gmail", "icon": "mail"},
+            {"label": "Keyword: whatsapp", "command": "whatsapp", "icon": "chat"},
+            {"label": "Keyword: insta", "command": "insta", "icon": "camera"},
         ),
     },
     {
@@ -135,6 +141,53 @@ CAPABILITIES: tuple[dict[str, object], ...] = (
         ),
     },
 )
+
+
+# Everything the assistant can open, one app at a time, as:
+#   (label, url, open-phrases, one-word keywords)
+# The first entry of `open_phrases` is the canonical keyword the UI offers; the
+# rest are aliases. `one-word keywords` are matched only when the whole sentence
+# is just that word, so "gmail" opens Gmail while "gmail is slow today" still
+# falls through to normal conversation. Order matters: more specific phrases
+# come first ("open google drive" before "open google").
+APPS: tuple[tuple[str, str, tuple[str, ...], tuple[str, ...]], ...] = (
+    (
+        "Google Classroom",
+        "https://classroom.google.com",
+        ("open google classroom", "open classroom"),
+        ("classroom", "google classroom"),
+    ),
+    (
+        "Google Drive",
+        "https://drive.google.com",
+        ("open google drive", "open drive"),
+        ("drive", "google drive"),
+    ),
+    ("Claude", "https://claude.ai", ("open claude ai", "open claude"), ("claude", "claude ai")),
+    ("Gemini", "https://gemini.google.com", ("open gemini",), ("gemini",)),
+    ("Google", "https://www.google.com", ("open google",), ("google",)),
+    ("GitHub", "https://github.com", ("open github",), ("github",)),
+    ("WhatsApp", "https://web.whatsapp.com", ("open whatsapp",), ("whatsapp", "whats app", "web whatsapp")),
+    # No bare "gmail" in the phrases: the one-word form is handled by the
+    # whole-sentence keyword check, so "gmail is slow today" stays chatter.
+    (
+        "Gmail",
+        "https://mail.google.com",
+        ("open email", "open gmail"),
+        ("gmail", "email", "mail"),
+    ),
+    ("ChatGPT", "https://chatgpt.com", ("open chatgpt",), ("chatgpt", "gpt", "chat gpt")),
+    (
+        "Instagram",
+        "https://www.instagram.com",
+        ("open instagram",),
+        ("instagram", "insta"),
+    ),
+)
+
+# YouTube is matched separately (it also carries a search query), but it still
+# answers to its own one-word keywords.
+YOUTUBE_KEYWORDS = ("youtube", "you tube", "yt")
 
 
 def capabilities() -> dict[str, object]:
@@ -262,19 +315,14 @@ def process_command(command: str) -> dict[str, object]:
             status="time",
         )
 
-    if "open google classroom" in normalized:
-        return _response(
-            original,
-            "Opening Google Classroom.",
-            action=_action("Open Google Classroom", "https://classroom.google.com"),
-            status="action",
-        )
-
-    # Support both the original "open YouTube and play …" form and the more
-    # natural "play … on YouTube" phrasing.
+    # YouTube carries an optional search query, so it is matched on its own
+    # before the plain "open <app>" table below: both the original
+    # "open YouTube and play …" form and the natural "play … on YouTube"
+    # phrasing, plus the bare keyword "youtube".
     youtube_query = ""
-    open_youtube = re.search(r"\bopen youtube\b(.*)$", normalized)
-    play_on_youtube = re.search(r"\bplay\s+(.+?)\s+on youtube\b", normalized)
+    bare_youtube = normalized in YOUTUBE_KEYWORDS
+    open_youtube = re.search(r"\bopen you ?tube\b(.*)$", normalized)
+    play_on_youtube = re.search(r"\bplay\s+(.+?)\s+on you ?tube\b", normalized)
     if open_youtube:
         tail = open_youtube.group(1).strip()
         tail = re.sub(r"^(?:and\s+)?play\b", "", tail).strip()
@@ -282,7 +330,7 @@ def process_command(command: str) -> dict[str, object]:
     elif play_on_youtube:
         youtube_query = play_on_youtube.group(1).strip()
 
-    if open_youtube or play_on_youtube:
+    if open_youtube or play_on_youtube or bare_youtube:
         if youtube_query:
             safe_query = quote_plus(youtube_query)
             return _response(
@@ -321,19 +369,10 @@ def process_command(command: str) -> dict[str, object]:
             status="action",
         )
 
-    destinations: tuple[tuple[tuple[str, ...], str, str], ...] = (
-        (("open google drive", "open drive"), "Google Drive", "https://drive.google.com"),
-        (("open claude ai", "open claude"), "Claude", "https://claude.ai"),
-        (("open gemini",), "Gemini", "https://gemini.google.com"),
-        (("open google",), "Google", "https://www.google.com"),
-        (("open github",), "GitHub", "https://github.com"),
-        (("open whatsapp",), "WhatsApp", "https://web.whatsapp.com"),
-        (("open email", "open gmail", "gmail"), "Gmail", "https://mail.google.com"),
-        (("open chatgpt",), "ChatGPT", "https://chatgpt.com"),
-        (("open instagram",), "Instagram", "https://www.instagram.com"),
-    )
-    for triggers, label, url in destinations:
-        if any(trigger in normalized for trigger in triggers):
+    # One app at a time: either the "open …" phrase anywhere in the sentence, or
+    # the app's one-word keyword when that is all that was said ("gmail").
+    for label, url, open_phrases, one_words in APPS:
+        if any(phrase in normalized for phrase in open_phrases) or normalized in one_words:
             return _response(
                 original,
                 f"Opening {label}.",
