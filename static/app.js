@@ -234,6 +234,21 @@
     return article;
   }
 
+  /* The log and the input box share one panel, so what you type normally sits
+     right below the conversation. On a short window a long page can still push
+     the log off screen, so pull it back into view the moment typing starts. */
+  function revealConversation() {
+    const log = els.conversation;
+    if (typeof log.getBoundingClientRect !== "function") return;
+    const rect = log.getBoundingClientRect();
+    if (!rect.height) return; // not laid out yet (or a headless DOM)
+    const viewport = window.innerHeight || document.documentElement.clientHeight || 0;
+    const visible = Math.min(rect.bottom, viewport) - Math.max(rect.top, 0);
+    if (visible < Math.min(rect.height, 220) * 0.7 && typeof log.scrollIntoView === "function") {
+      log.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }
+
   let typingEl = null;
   function showTyping() {
     removeTyping();
@@ -303,6 +318,7 @@
     state.historyIndex = state.history.length;
     updateCount();
     appendMessage("user", command);
+    revealConversation();
     setStatus("thinking");
     showFix(null);
 
@@ -846,12 +862,16 @@
     sendCommand(command);
   });
 
+  // Start typing (mouse or Ctrl/Cmd+K) and the conversation is on screen with you.
+  els.input.addEventListener("focus", revealConversation);
+
   // One delegated handler covers every dynamically rendered command button.
   document.addEventListener("click", (event) => {
     const trigger = event.target.closest("[data-command]");
     if (!trigger || state.busy) return;
     const command = trigger.getAttribute("data-command");
     if (!command) return;
+    revealConversation();
     els.input.value = command;
     els.form.requestSubmit();
   });

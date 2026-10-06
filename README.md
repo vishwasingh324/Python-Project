@@ -88,9 +88,16 @@ none are ever stored in the repository.
 
 ## The frontend
 
+- **The conversation and the input box share one panel.** The log sits directly
+  above the box you type in, so what you asked and what I answered stay on
+  screen while you write the next line. New bubbles appear next to the input and
+  the log scrolls on its own — the box never moves, and nothing is hidden in a
+  section further down the page.
 - **Talk or type.** The microphone uses the browser's speech recognition; the
   input box always works, and `Enter` sends. `Ctrl`/`Cmd`+`K` focuses the input,
   `Esc` cancels listening, `↑`/`↓` walk back through your command history.
+  Focusing the input also scrolls the conversation into view if a short window
+  had pushed it off screen.
 - **Conversation log** with timestamps, the backend's `status` for each reply, a
   copy button, and a clickable **Open …** link when the backend returned an action.
 - **Spoken replies** are opt-in via the *Sound* toggle in the top bar.
