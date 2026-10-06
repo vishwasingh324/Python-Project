@@ -1,8 +1,10 @@
+import json
 import unittest
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from backend import process_command
+from backend import capabilities, process_command
 
 
 class ProcessCommandTests(unittest.TestCase):
@@ -106,6 +108,43 @@ class ProcessCommandTests(unittest.TestCase):
                 result = process_command(command)
                 self.assertEqual(result["status"], "stopped")
                 self.assertFalse(result["should_continue"])
+
+
+class FixtureTests(unittest.TestCase):
+    """The frontend smoke test renders from this fixture, so keep it in sync."""
+
+    def test_capabilities_fixture_matches_backend(self):
+        fixture_path = Path(__file__).resolve().parent / "fixtures" / "capabilities.json"
+        if not fixture_path.exists():
+            self.skipTest("fixture not generated yet")
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+        self.assertEqual(fixture, capabilities(), "regenerate tests/fixtures/capabilities.json")
+
+
+class CapabilitiesTests(unittest.TestCase):
+    def test_capabilities_shape(self):
+        data = capabilities()
+        self.assertIn("categories", data)
+        self.assertGreaterEqual(len(data["categories"]), 3)
+        for category in data["categories"]:
+            self.assertTrue(category["label"])
+            self.assertTrue(category["items"])
+
+    def test_every_offered_example_is_understood(self):
+        """The UI renders these straight from the API, so they must all work."""
+        for category in capabilities()["categories"]:
+            for item in category["items"]:
+                with self.subTest(category=category["id"], command=item["command"]):
+                    result = process_command(item["command"])
+                    self.assertNotEqual(result["status"], "unknown", f"{item['command']!r} is not understood")
+                    self.assertNotEqual(result["status"], "empty")
+
+    def test_capabilities_returns_copies(self):
+        first = capabilities()
+        first["categories"][0]["items"][0]["label"] = "mutated"
+        first["categories"][0]["label"] = "mutated"
+        self.assertNotEqual(capabilities()["categories"][0]["items"][0]["label"], "mutated")
+        self.assertNotEqual(capabilities()["categories"][0]["label"], "mutated")
 
 
 if __name__ == "__main__":

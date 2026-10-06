@@ -3,228 +3,221 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="A voice-first command center for your everyday web shortcuts."
-    />
-    <meta name="theme-color" content="#0d0f17" />
-    <title>Backend — Alexa Assistant</title>
+    <meta name="description" content="Voice and typed commands for YouTube, Google, Gmail, Drive, Classroom, GitHub and more." />
+    <meta name="theme-color" content="#0b0d16" />
+    <title>Alexa Assistant — Command Center</title>
     <link rel="stylesheet" href="/styles.css" />
     <script src="/app.js" defer></script>
   </head>
-  <body data-state="ready">
-    <div class="app-shell">
-      <aside class="sidebar" aria-label="Main navigation">
-        <a class="brand" href="/" aria-label="Backend assistant home">
+  <body data-state="ready" data-voice="unknown">
+    <a class="skip-link" href="#command-input">Skip to command input</a>
+
+    <div class="app">
+      <!-- ───────────────────────── sidebar ───────────────────────── -->
+      <aside class="rail">
+        <div class="brand">
           <span class="brand-mark" aria-hidden="true">
             <svg viewBox="0 0 36 36" fill="none">
               <circle cx="18" cy="18" r="16" fill="url(#brand-fill)" />
               <path
                 d="M11.5 18.2c0-3.6 2.8-6.5 6.5-6.5s6.5 2.9 6.5 6.5v4.1a2.1 2.1 0 0 1-2.1 2.1h-1.6v-6.1h1.6m-8.8 0h1.6v6.1h-1.6a2.1 2.1 0 0 1-2.1-2.1v-4.1Zm2.1 7.6c.7 1.1 1.8 1.7 3.2 1.7h1.5"
-                stroke="white"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
+                stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"
               />
               <defs>
                 <linearGradient id="brand-fill" x1="3" y1="4" x2="32" y2="33" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#a78bfa" />
-                  <stop offset="1" stop-color="#6756ed" />
+                  <stop stop-color="#a78bfa" /><stop offset="1" stop-color="#5b5bf0" />
                 </linearGradient>
               </defs>
             </svg>
           </span>
           <span class="brand-copy">
-            <span class="brand-name">backend<span class="brand-period">.</span></span>
-            <span class="brand-caption">ALEXA ASSISTANT</span>
+            <span class="brand-name">Alexa<span class="brand-dot">.</span></span>
+            <span class="brand-caption">VOICE ASSISTANT</span>
           </span>
-        </a>
-
-        <div class="sidebar-divider"></div>
-
-        <p class="nav-label">WORKSPACE</p>
-        <button class="nav-item nav-item-active" type="button" aria-current="page">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.5"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.5"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.5"/></svg>
-          <span>Assistant</span>
-          <span class="nav-current-dot" aria-hidden="true"></span>
-        </button>
-        <a class="nav-item nav-anchor" href="#activity">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v11H9l-5 3v-14Z"/><path d="M8 9.5h8M8 13h5"/></svg>
-          <span>Activity</span>
-          <span class="nav-count" id="nav-command-count">0</span>
-        </a>
-
-        <div class="sidebar-section-heading">
-          <p class="nav-label">QUICK LAUNCH</p>
-          <span class="section-dot" aria-hidden="true"></span>
-        </div>
-        <div class="quick-launch-list">
-          <button class="quick-launch" type="button" data-command="open youtube">
-            <span class="quick-icon icon-youtube" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M20.6 7.2a2.5 2.5 0 0 0-1.8-1.8C17.2 5 12 5 12 5s-5.2 0-6.8.4a2.5 2.5 0 0 0-1.8 1.8A25.8 25.8 0 0 0 3 12s0 2.9.4 4.8a2.5 2.5 0 0 0 1.8 1.8C6.8 19 12 19 12 19s5.2 0 6.8-.4a2.5 2.5 0 0 0 1.8-1.8A25.8 25.8 0 0 0 21 12s0-2.9-.4-4.8ZM10 15.5v-7l6 3.5-6 3.5Z" fill="currentColor" stroke="none"/></svg>
-            </span>
-            <span>YouTube</span>
-            <svg class="launch-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10m-4-4 4 4-4 4"/></svg>
-          </button>
-          <button class="quick-launch" type="button" data-command="open google">
-            <span class="quick-icon icon-google" aria-hidden="true"><span>G</span></span>
-            <span>Google</span>
-            <svg class="launch-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10m-4-4 4 4-4 4"/></svg>
-          </button>
-          <button class="quick-launch" type="button" data-command="open gmail">
-            <span class="quick-icon icon-mail" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M4 6.5h16v11H4v-11Z"/><path d="m4.5 7 7.5 6 7.5-6"/></svg>
-            </span>
-            <span>Gmail</span>
-            <svg class="launch-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10m-4-4 4 4-4 4"/></svg>
-          </button>
-          <button class="quick-launch" type="button" data-command="open google drive">
-            <span class="quick-icon icon-drive" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="m9 4-6 11 3 5 6-11-3-5Z"/><path d="M9 4h6l6 11h-6L9 4Z"/><path d="M6 20h12l3-5H9l-3 5Z"/></svg>
-            </span>
-            <span>Google Drive</span>
-            <svg class="launch-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10m-4-4 4 4-4 4"/></svg>
-          </button>
-          <button class="quick-launch" type="button" data-command="open github">
-            <span class="quick-icon icon-github" aria-hidden="true">
-              <svg viewBox="0 0 24 24"><path d="M12 3.5a8.5 8.5 0 0 0-2.7 16.6v-1.8c-2.2.5-2.7-1-2.7-1-.4-.9-.9-1.2-.9-1.2-.7-.5.1-.5.1-.5.8.1 1.2.9 1.2.9.7 1.2 1.8.8 2.3.6.1-.5.3-.8.5-1-1.8-.2-3.7-.9-3.7-4a3.1 3.1 0 0 1 .8-2.1c-.1-.2-.4-1 .1-2.1 0 0 .7-.2 2.2.8a7.6 7.6 0 0 1 4 0c1.5-1 2.2-.8 2.2-.8.5 1.1.2 1.9.1 2.1.5.6.8 1.3.8 2.1 0 3.1-1.9 3.8-3.7 4 .3.2.5.7.5 1.4v2.6A8.5 8.5 0 0 0 12 3.5Z" fill="currentColor" stroke="none"/></svg>
-            </span>
-            <span>GitHub</span>
-            <svg class="launch-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10h10m-4-4 4 4-4 4"/></svg>
-          </button>
         </div>
 
-        <div class="sidebar-bottom">
-          <div class="system-card">
-            <div class="system-card-top">
-              <span class="health-indicator" id="health-indicator" aria-hidden="true"></span>
-              <span class="system-card-title" id="health-label">Checking backend</span>
+        <nav class="rail-nav" aria-label="Sections">
+          <a class="rail-link" href="#assistant">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6"/></svg>
+            Assistant
+          </a>
+          <a class="rail-link" href="#capabilities">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5L10 13l-5.5-2L10 9l2-5.5Z"/></svg>
+            Capabilities
+          </a>
+          <a class="rail-link" href="#conversation-section">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5.5h16v11H9l-5 3v-14Z"/><path d="M8 9.5h8M8 13h5"/></svg>
+            Conversation
+            <span class="rail-badge" id="nav-count">0</span>
+          </a>
+        </nav>
+
+        <div class="rail-block">
+          <p class="rail-label">QUICK LAUNCH</p>
+          <div class="rail-launch" id="rail-launch" aria-live="polite"></div>
+        </div>
+
+        <div class="rail-foot">
+          <div class="health-card">
+            <span class="health-dot" id="health-dot" aria-hidden="true"></span>
+            <div class="health-copy">
+              <strong id="health-label">Checking backend…</strong>
+              <span id="health-detail">Local assistant runtime</span>
             </div>
-            <p>Local assistant runtime</p>
           </div>
-          <div class="profile-row">
-            <div class="profile-avatar" aria-hidden="true">A</div>
-            <div class="profile-copy"><strong>Alexa</strong><span>Voice assistant</span></div>
-            <span class="profile-menu" aria-hidden="true">···</span>
-          </div>
+          <button class="rail-button" id="voice-check" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5v9M8 6.5v6m8-6v6M5 8.5v3m14-3v3"/></svg>
+            Voice check
+          </button>
         </div>
       </aside>
 
-      <main class="main-area">
+      <!-- ───────────────────────── main ───────────────────────── -->
+      <main class="main">
         <header class="topbar">
-          <div class="breadcrumbs"><span>Workspace</span><span class="breadcrumb-slash">/</span><strong>Assistant</strong></div>
+          <div class="crumbs"><span>Workspace</span><span class="crumb-sep">/</span><strong>Assistant</strong></div>
           <div class="topbar-actions">
-            <div class="assistant-state-pill" id="assistant-state-pill">
-              <span class="state-indicator" aria-hidden="true"></span>
+            <span class="state-pill" id="state-pill">
+              <span class="state-dot" aria-hidden="true"></span>
               <span id="state-pill-text">Ready to help</span>
-            </div>
-            <span class="topbar-separator" aria-hidden="true"></span>
-            <button class="sound-toggle" id="sound-toggle" type="button" aria-pressed="false" title="Turn spoken replies on">
-              <svg class="sound-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l4 3V7l-4 3H4Z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5m2.5-7.5a7 7 0 0 1 0 10"/></svg>
-              <span id="sound-toggle-label">Sound off</span>
-            </button>
-            <button class="shortcut-button" id="focus-shortcut" type="button" title="Focus command input">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"/><path d="m15.5 15.5 4.2 4.2M8.5 10.8h4.6m-2.3-2.3v4.6"/></svg>
+            </span>
+            <button class="ghost-button" id="sound-toggle" type="button" aria-pressed="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l4 3V7l-4 3H4Z"/><path d="M15 9.5a3.5 3.5 0 0 1 0 5m2.5-7.5a7 7 0 0 1 0 10"/></svg>
+              <span id="sound-label">Sound off</span>
             </button>
           </div>
         </header>
 
-        <div class="page-content">
-          <section class="page-heading" aria-labelledby="page-title">
-            <div>
-              <p class="eyebrow"><span class="eyebrow-sparkle" aria-hidden="true">✦</span> YOUR PERSONAL COMMAND CENTER</p>
-              <h1 id="page-title">A little help, <span>right on cue.</span></h1>
-              <p class="page-subtitle">Speak a command or type one below. Alexa is ready to take it from here.</p>
-            </div>
-            <div class="date-chip"><span class="date-chip-dot" aria-hidden="true"></span><span id="today-label">YOUR ASSISTANT IS ONLINE</span></div>
-          </section>
-
-          <section class="workspace-grid" aria-label="Assistant workspace">
-            <section class="assistant-panel panel" aria-labelledby="assistant-panel-title">
-              <div class="panel-topline">
-                <div class="panel-identity">
-                  <div class="mini-assistant-mark" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M7 11.5a5 5 0 0 1 10 0v3.2a1.4 1.4 0 0 1-1.4 1.4h-1.2v-4.8h1.2m-8.6 0h1.2v4.8H7A1.4 1.4 0 0 1 5.6 14.7v-3.2Zm2.6 6.1c.7.8 1.7 1.2 2.8 1.2h1.2"/></svg>
-                  </div>
-                  <div><h2 id="assistant-panel-title">Alexa assistant</h2><p>Personal voice companion</p></div>
-                </div>
-                <span class="secure-badge"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2.8 16 5v4.6c0 3.7-2.4 6.2-6 7.6-3.6-1.4-6-3.9-6-7.6V5l6-2.2Z"/><path d="m7.4 9.8 1.7 1.7 3.5-3.6"/></svg>BROWSER SESSION</span>
-              </div>
-
-              <div class="orb-stage" aria-label="Voice input control">
-                <div class="orb-backdrop orb-backdrop-one" aria-hidden="true"></div>
-                <div class="orb-backdrop orb-backdrop-two" aria-hidden="true"></div>
-                <div class="orb-ring orb-ring-outer" aria-hidden="true"></div>
-                <div class="orb-ring orb-ring-middle" aria-hidden="true"></div>
-                <button class="orb-button" id="mic-button" type="button" aria-label="Start voice command" title="Start listening">
-                  <span class="orb-button-glow" aria-hidden="true"></span>
-                  <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="11" y="4" width="10" height="17" rx="5"/><path d="M7.5 15.5v.8a8.5 8.5 0 0 0 17 0v-.8M16 24.8v4M12.3 28.8h7.4"/></svg>
-                </button>
-                <span class="orb-caption">TAP TO SPEAK</span>
-              </div>
-
-              <div class="assistant-prompt" aria-live="polite">
-                <span class="prompt-status" id="prompt-status">Ready when you are</span>
-                <p id="prompt-description">Tap the microphone and say something like <em>“open YouTube”</em></p>
-                <p class="speech-preview" id="speech-preview" aria-live="polite"></p>
-              </div>
-
-              <form class="command-form" id="command-form" autocomplete="off">
-                <label class="visually-hidden" for="command-input">Type a command for Alexa</label>
-                <span class="input-leading-icon" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M4 5.5h16v11H9l-5 3v-14Z"/><path d="M8 9.5h8M8 13h5"/></svg>
+        <div class="content">
+          <!-- hero / mic -->
+          <section class="hero panel" id="assistant" aria-labelledby="hero-title">
+            <div class="panel-head">
+              <div class="panel-identity">
+                <span class="mini-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M7 11.5a5 5 0 0 1 10 0v3.2a1.4 1.4 0 0 1-1.4 1.4h-1.2v-4.8h1.2m-8.6 0h1.2v4.8H7A1.4 1.4 0 0 1 5.6 14.7v-3.2Zm2.6 6.1c.7.8 1.7 1.2 2.8 1.2h1.2"/></svg>
                 </span>
-                <input id="command-input" name="command" type="text" maxlength="1000" placeholder="Type a command…" aria-describedby="input-helper" />
-                <button class="send-button" id="send-button" type="submit" aria-label="Send command" title="Send command">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
-                </button>
-              </form>
-              <div class="input-helper-row" id="input-helper"><span><kbd>Enter</kbd> to send</span><span class="input-helper-right"><span class="helper-dot" aria-hidden="true"></span> Browser-based speech input</span></div>
-
-              <div class="suggestion-row" aria-label="Try a command">
-                <span class="suggestion-label">TRY</span>
-                <button type="button" class="suggestion-chip" data-command="search for today's weather in Ahmedabad">Search the web <span>↗</span></button>
-                <button type="button" class="suggestion-chip" data-command="open google classroom">Open Classroom <span>↗</span></button>
-              </div>
-            </section>
-
-            <section class="activity-panel panel" id="activity" aria-labelledby="activity-title">
-              <div class="activity-header">
                 <div>
-                  <div class="activity-title-row"><h2 id="activity-title">Conversation</h2><span class="activity-count" id="activity-count">0</span></div>
-                  <p>Your recent commands and replies</p>
+                  <h1 id="hero-title">Alexa assistant</h1>
+                  <p>Speak or type — I'll take it from here</p>
                 </div>
-                <button class="clear-button" id="clear-activity" type="button" title="Clear conversation">
-                  <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 5.5h13m-11.5 0 .8 11h8.4l.8-11M8 5.5V3.8h4v1.7m-3 3v5m2-5v5"/></svg>
-                  <span>Clear</span>
-                </button>
               </div>
+              <span class="chip-badge" id="voice-badge">Voice: checking…</span>
+            </div>
 
-              <div class="conversation" id="conversation" role="log" aria-live="polite" aria-relevant="additions text">
-                <div class="empty-state" id="empty-state">
-                  <div class="empty-state-icon" aria-hidden="true">
-                    <svg viewBox="0 0 24 24"><path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5L10 13l-5.5-2L10 9l2-5.5Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
-                  </div>
-                  <strong>Your conversation starts here</strong>
-                  <p>Send a command to see Alexa's response.</p>
-                </div>
+            <div class="orb-stage">
+              <span class="orb-halo halo-one" aria-hidden="true"></span>
+              <span class="orb-halo halo-two" aria-hidden="true"></span>
+              <span class="orb-ring" aria-hidden="true"></span>
+              <button class="orb" id="mic-button" type="button" aria-label="Start voice command" aria-pressed="false">
+                <span class="orb-pulse" aria-hidden="true"></span>
+                <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="11" y="4" width="10" height="17" rx="5"/><path d="M7.5 15.5v.8a8.5 8.5 0 0 0 17 0v-.8M16 24.8v4M12.3 28.8h7.4"/></svg>
+              </button>
+              <span class="orb-caption" id="orb-caption">TAP TO SPEAK</span>
+              <div class="meter" id="meter" aria-hidden="true">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
               </div>
+            </div>
 
-              <div class="activity-footer">
-                <div class="footer-heading"><span>POPULAR COMMANDS</span><span class="footer-heading-line"></span></div>
-                <div class="popular-commands">
-                  <button type="button" data-command="open chatgpt"><span class="popular-command-icon icon-chatgpt">✳</span><span>Open ChatGPT</span><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4.5 9h9m-3.5-3.5L13.5 9 10 12.5"/></svg></button>
-                  <button type="button" data-command="open whatsapp"><span class="popular-command-icon icon-whatsapp">◉</span><span>Open WhatsApp</span><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4.5 9h9m-3.5-3.5L13.5 9 10 12.5"/></svg></button>
-                  <button type="button" data-command="open gemini"><span class="popular-command-icon icon-gemini">✦</span><span>Open Gemini</span><svg viewBox="0 0 18 18" aria-hidden="true"><path d="M4.5 9h9m-3.5-3.5L13.5 9 10 12.5"/></svg></button>
-                </div>
+            <div class="status-block" aria-live="polite">
+              <p class="status-title" id="status-title">Ready when you are</p>
+              <p class="status-text" id="status-text">Tap the microphone and say something like “open YouTube”, or type below.</p>
+              <p class="status-heard" id="status-heard" hidden></p>
+              <div class="status-fix" id="status-fix" hidden>
+                <span id="status-fix-text"></span>
+                <button class="inline-button" id="open-tab" type="button">Open in a new tab</button>
               </div>
-            </section>
+            </div>
+
+            <form class="command-form" id="command-form" autocomplete="off">
+              <label class="visually-hidden" for="command-input">Type a command for Alexa</label>
+              <span class="form-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M4 5.5h16v11H9l-5 3v-14Z"/><path d="M8 9.5h8M8 13h5"/></svg>
+              </span>
+              <input id="command-input" name="command" type="text" maxlength="1000"
+                     placeholder="Type a command…  e.g. “play lofi beats on youtube”"
+                     autocomplete="off" spellcheck="false" />
+              <button class="send-button" id="send-button" type="submit" aria-label="Send command">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+              </button>
+            </form>
+            <div class="helper-row">
+              <span><kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> focus · <kbd>Esc</kbd> cancel</span>
+              <span id="helper-right">Command API: <code>/api/command</code></span>
+            </div>
+
+            <div class="suggestion-row" id="suggestion-row" aria-label="Try a command"></div>
           </section>
 
-          <footer class="page-footer"><span>BACKEND <span class="footer-version">/ ALEXA VOICE ASSISTANT</span></span><span>Built for the little things you do every day <span class="footer-heart">✦</span></span></footer>
+          <!-- capabilities -->
+          <section class="panel" id="capabilities" aria-labelledby="capabilities-title">
+            <div class="panel-head">
+              <div>
+                <h2 id="capabilities-title">What I can do</h2>
+                <p class="panel-sub">Rendered from the backend’s <code>/api/commands</code> — click any card to run it.</p>
+              </div>
+            </div>
+            <div class="cap-grid" id="cap-grid" aria-live="polite"></div>
+          </section>
+
+          <!-- conversation -->
+          <section class="panel" id="conversation-section" aria-labelledby="conversation-title">
+            <div class="panel-head">
+              <div>
+                <h2 id="conversation-title">Conversation <span class="count-badge" id="count-badge">0</span></h2>
+                <p class="panel-sub">Your recent commands and replies</p>
+              </div>
+              <button class="ghost-button" id="clear-log" type="button">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 5.5h13m-11.5 0 .8 11h8.4l.8-11M8 5.5V3.8h4v1.7m-3 3v5m2-5v5"/></svg>
+                Clear
+              </button>
+            </div>
+            <div class="conversation" id="conversation" role="log" aria-live="polite" aria-relevant="additions text">
+              <div class="empty-state" id="empty-state">
+                <span class="empty-mark" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5L10 13l-5.5-2L10 9l2-5.5Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+                </span>
+                <strong>Your conversation starts here</strong>
+                <p>Type “Hi” for a greeting, or “help” to see everything I understand.</p>
+              </div>
+            </div>
+          </section>
+
+          <footer class="page-foot">
+            <span>ALEXA VOICE ASSISTANT · Python standard library only</span>
+            <span id="foot-status">backend: unknown</span>
+          </footer>
         </div>
       </main>
     </div>
+
+    <!-- ───────────────────────── voice diagnostics ───────────────────────── -->
+    <dialog class="dialog" id="diagnostics" aria-labelledby="diag-title">
+      <div class="dialog-head">
+        <div>
+          <h2 id="diag-title">Voice check</h2>
+          <p>Why voice may not work, and what to do about it.</p>
+        </div>
+        <button class="icon-button" id="diag-close" type="button" aria-label="Close diagnostics">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15"/></svg>
+        </button>
+      </div>
+
+      <ul class="check-list" id="check-list"></ul>
+
+      <div class="dialog-actions">
+        <button class="solid-button" id="test-mic" type="button">Test microphone</button>
+        <button class="ghost-button" id="copy-report" type="button">Copy report</button>
+        <button class="ghost-button" id="open-tab-2" type="button">Open in a new tab</button>
+      </div>
+
+      <div class="mic-test" id="mic-test" hidden>
+        <div class="mic-test-meter" id="mic-test-meter" aria-hidden="true">
+          <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <p id="mic-test-result">Waiting…</p>
+      </div>
+    </dialog>
+
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </body>
 </html>

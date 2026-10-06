@@ -72,6 +72,77 @@ _HELP_REPLY = (
     "Say 'stop' to end the session."
 )
 
+# Single source of truth for what the assistant can do. The frontend renders
+# its quick-launch buttons, command cards and suggestions from /api/commands,
+# so the UI can never drift away from what the backend actually understands.
+# A test asserts every offered example resolves to a real intent.
+CAPABILITIES: tuple[dict[str, object], ...] = (
+    {
+        "id": "launch",
+        "label": "Open a site",
+        "hint": "Jump straight to a site I already know.",
+        "items": (
+            {"label": "YouTube", "command": "open youtube", "icon": "play"},
+            {"label": "Google", "command": "open google", "icon": "search"},
+            {"label": "Gmail", "command": "open gmail", "icon": "mail"},
+            {"label": "Google Drive", "command": "open google drive", "icon": "drive"},
+            {"label": "Google Classroom", "command": "open google classroom", "icon": "book"},
+            {"label": "GitHub", "command": "open github", "icon": "code"},
+            {"label": "WhatsApp", "command": "open whatsapp", "icon": "chat"},
+            {"label": "Claude", "command": "open claude ai", "icon": "spark"},
+            {"label": "Gemini", "command": "open gemini", "icon": "spark"},
+            {"label": "ChatGPT", "command": "open chatgpt", "icon": "spark"},
+            {"label": "Instagram", "command": "open instagram", "icon": "camera"},
+        ),
+    },
+    {
+        "id": "play",
+        "label": "Play on YouTube",
+        "hint": "Name a song or topic and I search YouTube for it.",
+        "items": (
+            {"label": "lofi beats", "command": "play lofi beats on youtube", "icon": "play"},
+            {"label": "study music", "command": "play study music on youtube", "icon": "play"},
+            {"label": "workout playlist", "command": "play workout playlist on youtube", "icon": "play"},
+        ),
+    },
+    {
+        "id": "search",
+        "label": "Search the web",
+        "hint": "Look something up without opening a tab first.",
+        "items": (
+            {"label": "Python tutorials", "command": "search for python tutorials", "icon": "search"},
+            {"label": "weather in Ahmedabad", "command": "search for weather in ahmedabad", "icon": "search"},
+            {"label": "best study playlists", "command": "search for best study playlists", "icon": "search"},
+        ),
+    },
+    {
+        "id": "chat",
+        "label": "Just talk",
+        "hint": "Greetings, help, the time and the date.",
+        "items": (
+            {"label": "Say hello", "command": "hello", "icon": "wave"},
+            {"label": "What can you do", "command": "help", "icon": "info"},
+            {"label": "The time", "command": "what time is it", "icon": "clock"},
+            {"label": "Today's date", "command": "what is todays date", "icon": "calendar"},
+        ),
+    },
+)
+
+
+def capabilities() -> dict[str, object]:
+    """Return a JSON-friendly description of the supported commands."""
+    return {
+        "categories": [
+            {
+                "id": category["id"],
+                "label": category["label"],
+                "hint": category["hint"],
+                "items": [dict(item) for item in category["items"]],
+            }
+            for category in CAPABILITIES
+        ]
+    }
+
 
 def _time_and_date(now: datetime) -> str:
     time_text = now.strftime("%I:%M %p").lstrip("0")
@@ -303,6 +374,10 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
         request_path = urlsplit(self.path).path
         if request_path == "/api/health":
             self._send_json({"status": "ok", "assistant": "Alexa"})
+            return
+
+        if request_path == "/api/commands":
+            self._send_json(capabilities())
             return
 
         relative_path = unquote(request_path).lstrip("/") or "index.html"
