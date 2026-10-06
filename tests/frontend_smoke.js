@@ -110,6 +110,23 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   check("suggestion chips rendered", doc.querySelectorAll("#suggestion-row .suggestion-chip").length === 3);
   check("embedded frame detected", doc.getElementById("voice-badge").textContent.includes("may be blocked"));
 
+  // The input and the conversation live in the same panel, in that order, so the
+  // exchange is on screen while you type.
+  const assistantPanel = doc.getElementById("assistant");
+  check(
+    "conversation and input share the assistant panel",
+    assistantPanel.contains(doc.getElementById("conversation")) &&
+      assistantPanel.contains(doc.getElementById("command-form"))
+  );
+  check(
+    "conversation sits directly above the input box",
+    Boolean(
+      doc.getElementById("conversation").compareDocumentPosition(doc.getElementById("command-form")) &
+        window.Node.DOCUMENT_POSITION_FOLLOWING
+    )
+  );
+  check("only one conversation log on the page", doc.querySelectorAll("#conversation").length === 1);
+
   const input = doc.getElementById("command-input");
   input.value = "open youtube";
   doc.getElementById("command-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));

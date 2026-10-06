@@ -89,8 +89,9 @@
         </header>
 
         <div class="content">
-          <!-- hero / mic -->
-          <section class="hero panel" id="assistant" aria-labelledby="hero-title">
+          <!-- voice + conversation: the log and the input box share one panel so
+               the whole exchange stays on screen while you type -->
+          <section class="panel assistant-panel" id="assistant" aria-labelledby="hero-title">
             <div class="panel-head">
               <div class="panel-identity">
                 <span class="mini-mark" aria-hidden="true">
@@ -104,48 +105,77 @@
               <span class="chip-badge" id="voice-badge">Voice: checking…</span>
             </div>
 
-            <div class="orb-stage">
-              <span class="orb-halo halo-one" aria-hidden="true"></span>
-              <span class="orb-halo halo-two" aria-hidden="true"></span>
-              <span class="orb-ring" aria-hidden="true"></span>
-              <button class="orb" id="mic-button" type="button" aria-label="Start voice command" aria-pressed="false">
-                <span class="orb-pulse" aria-hidden="true"></span>
-                <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="11" y="4" width="10" height="17" rx="5"/><path d="M7.5 15.5v.8a8.5 8.5 0 0 0 17 0v-.8M16 24.8v4M12.3 28.8h7.4"/></svg>
-              </button>
-              <span class="orb-caption" id="orb-caption">TAP TO SPEAK</span>
-              <div class="meter" id="meter" aria-hidden="true">
-                <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+            <div class="assistant-body">
+              <!-- left: microphone + live status -->
+              <div class="voice-pane">
+                <div class="orb-stage">
+                  <span class="orb-halo halo-one" aria-hidden="true"></span>
+                  <span class="orb-halo halo-two" aria-hidden="true"></span>
+                  <span class="orb-ring" aria-hidden="true"></span>
+                  <button class="orb" id="mic-button" type="button" aria-label="Start voice command" aria-pressed="false">
+                    <span class="orb-pulse" aria-hidden="true"></span>
+                    <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="11" y="4" width="10" height="17" rx="5"/><path d="M7.5 15.5v.8a8.5 8.5 0 0 0 17 0v-.8M16 24.8v4M12.3 28.8h7.4"/></svg>
+                  </button>
+                  <span class="orb-caption" id="orb-caption">TAP TO SPEAK</span>
+                  <div class="meter" id="meter" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                  </div>
+                </div>
+
+                <div class="status-block" aria-live="polite">
+                  <p class="status-title" id="status-title">Ready when you are</p>
+                  <p class="status-text" id="status-text">Tap the microphone and say something like “open YouTube”, or type below.</p>
+                  <p class="status-heard" id="status-heard" hidden></p>
+                  <div class="status-fix" id="status-fix" hidden>
+                    <span id="status-fix-text"></span>
+                    <button class="inline-button" id="open-tab" type="button">Open in a new tab</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- right: the conversation, with the input box directly under it -->
+              <div class="chat-pane" id="conversation-section" aria-labelledby="conversation-title">
+                <div class="chat-head">
+                  <div>
+                    <h2 id="conversation-title">Conversation <span class="count-badge" id="count-badge">0</span></h2>
+                    <p class="panel-sub">Your words and my replies appear right here, above the box you type in.</p>
+                  </div>
+                  <button class="ghost-button" id="clear-log" type="button">
+                    <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 5.5h13m-11.5 0 .8 11h8.4l.8-11M8 5.5V3.8h4v1.7m-3 3v5m2-5v5"/></svg>
+                    Clear
+                  </button>
+                </div>
+
+                <div class="conversation" id="conversation" role="log" aria-live="polite" aria-relevant="additions text">
+                  <div class="empty-state" id="empty-state">
+                    <span class="empty-mark" aria-hidden="true">
+                      <svg viewBox="0 0 24 24"><path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5L10 13l-5.5-2L10 9l2-5.5Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
+                    </span>
+                    <strong>Your conversation starts here</strong>
+                    <p>Try “hi”, “tell me a joke”, “I’m tired”, “what is 12 * 8” — or “help” for commands. I remember this chat, so “open it” and “what did I ask?” work too.</p>
+                  </div>
+                </div>
+
+                <form class="command-form" id="command-form" autocomplete="off">
+                  <label class="visually-hidden" for="command-input">Type a command for Alexa</label>
+                  <span class="form-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><path d="M4 5.5h16v11H9l-5 3v-14Z"/><path d="M8 9.5h8M8 13h5"/></svg>
+                  </span>
+                  <input id="command-input" name="command" type="text" maxlength="1000"
+                         placeholder="Say anything…  e.g. “hi”, “tell me a joke”, or “open YouTube”"
+                         autocomplete="off" spellcheck="false" />
+                  <button class="send-button" id="send-button" type="submit" aria-label="Send command">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
+                  </button>
+                </form>
+                <div class="helper-row">
+                  <span><kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> focus · <kbd>Esc</kbd> cancel</span>
+                  <span id="helper-right">Command API: <code>/api/command</code></span>
+                </div>
+
+                <div class="suggestion-row" id="suggestion-row" aria-label="Try a command"></div>
               </div>
             </div>
-
-            <div class="status-block" aria-live="polite">
-              <p class="status-title" id="status-title">Ready when you are</p>
-              <p class="status-text" id="status-text">Tap the microphone and say something like “open YouTube”, or type below.</p>
-              <p class="status-heard" id="status-heard" hidden></p>
-              <div class="status-fix" id="status-fix" hidden>
-                <span id="status-fix-text"></span>
-                <button class="inline-button" id="open-tab" type="button">Open in a new tab</button>
-              </div>
-            </div>
-
-            <form class="command-form" id="command-form" autocomplete="off">
-              <label class="visually-hidden" for="command-input">Type a command for Alexa</label>
-              <span class="form-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24"><path d="M4 5.5h16v11H9l-5 3v-14Z"/><path d="M8 9.5h8M8 13h5"/></svg>
-              </span>
-              <input id="command-input" name="command" type="text" maxlength="1000"
-                     placeholder="Say anything…  e.g. “hi”, “tell me a joke”, or “open YouTube”"
-                     autocomplete="off" spellcheck="false" />
-              <button class="send-button" id="send-button" type="submit" aria-label="Send command">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-6-6 6 6-6 6"/></svg>
-              </button>
-            </form>
-            <div class="helper-row">
-              <span><kbd>Enter</kbd> send · <kbd>Ctrl</kbd>+<kbd>K</kbd> focus · <kbd>Esc</kbd> cancel</span>
-              <span id="helper-right">Command API: <code>/api/command</code></span>
-            </div>
-
-            <div class="suggestion-row" id="suggestion-row" aria-label="Try a command"></div>
           </section>
 
           <!-- capabilities -->
@@ -157,29 +187,6 @@
               </div>
             </div>
             <div class="cap-grid" id="cap-grid" aria-live="polite"></div>
-          </section>
-
-          <!-- conversation -->
-          <section class="panel" id="conversation-section" aria-labelledby="conversation-title">
-            <div class="panel-head">
-              <div>
-                <h2 id="conversation-title">Conversation <span class="count-badge" id="count-badge">0</span></h2>
-                <p class="panel-sub">Your recent commands and replies</p>
-              </div>
-              <button class="ghost-button" id="clear-log" type="button">
-                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 5.5h13m-11.5 0 .8 11h8.4l.8-11M8 5.5V3.8h4v1.7m-3 3v5m2-5v5"/></svg>
-                Clear
-              </button>
-            </div>
-            <div class="conversation" id="conversation" role="log" aria-live="polite" aria-relevant="additions text">
-              <div class="empty-state" id="empty-state">
-                <span class="empty-mark" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M12 3.5 14 9l5.5 2-5.5 2-2 5.5L10 13l-5.5-2L10 9l2-5.5Z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15Z"/></svg>
-                </span>
-                <strong>Your conversation starts here</strong>
-                <p>Try “hi”, “tell me a joke”, “I’m tired”, “what is 12 * 8” — or “help” for commands. I remember this chat, so “open it” and “what did I ask?” work too.</p>
-              </div>
-            </div>
           </section>
 
           <footer class="page-foot">
