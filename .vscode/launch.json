@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Assistant: web server (offline)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend.py",
+      "python": "${command:python.interpreterPath}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "args": []
+    },
+    {
+      "name": "Assistant: web server on another port",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend.py",
+      "python": "${command:python.interpreterPath}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "args": ["--port", "8081"]
+    },
+    {
+      "name": "Assistant: terminal chat (CLI)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/backend.py",
+      "python": "${command:python.interpreterPath}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "justMyCode": true,
+      "args": ["--cli"]
+    },
+    {
+      "name": "Tests: unittest",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "unittest",
+      "python": "${command:python.interpreterPath}",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "args": ["discover", "-s", "tests", "-v"]
+    }
+  ]
+}
