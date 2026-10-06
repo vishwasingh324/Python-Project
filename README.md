@@ -80,7 +80,27 @@ none are ever stored in the repository.
 
 ## What you can say
 
-- **Open a site:** "open YouTube", "open Google Classroom", "open Drive", "open Claude", "open Gemini", "open Google", "open GitHub", "open WhatsApp", "open Gmail", "open ChatGPT", "open Instagram".
+- **Open an app — one at a time.** Say "open *name*" ("open YouTube",
+  "open Google Classroom", "open Drive", "open Gmail", …) **or just the app's
+  one-word keyword**:
+
+  | App | Keyword (say this on its own) |
+  | --- | --- |
+  | YouTube | `youtube` (also `yt`) |
+  | Google | `google` |
+  | Gmail | `gmail` (also `email`) |
+  | Google Drive | `drive` |
+  | Google Classroom | `classroom` |
+  | GitHub | `github` |
+  | WhatsApp | `whatsapp` |
+  | Claude | `claude` |
+  | Gemini | `gemini` |
+  | ChatGPT | `chatgpt` (also `gpt`) |
+  | Instagram | `instagram` (also `insta`) |
+
+  Each keyword launches exactly one app — nothing opens in bulk. A keyword only
+  counts when it is the whole sentence, so "gmail is slow today" stays
+  conversation instead of hijacking the chat and opening a tab.
 - **YouTube:** "play lofi beats on YouTube" or "open YouTube and play lofi beats".
 - **Web search:** "search for Python tutorials".
 - **Conversation:** "hi", "how are you", "tell me a joke", "I'm tired", "flip a coin", "what is 12 * 8", "thanks", "help", "what time is it", "what's the date".

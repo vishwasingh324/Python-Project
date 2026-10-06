@@ -48,6 +48,53 @@ class ProcessCommandTests(unittest.TestCase):
             with self.subTest(command=command):
                 self.assertEqual(process_command(command)["action"]["url"], expected_url)
 
+    def test_one_word_keywords_open_one_app_each(self):
+        """Every app answers to its own single-word keyword."""
+        cases = {
+            "youtube": "https://www.youtube.com",
+            "google": "https://www.google.com",
+            "gmail": "https://mail.google.com",
+            "email": "https://mail.google.com",
+            "drive": "https://drive.google.com",
+            "classroom": "https://classroom.google.com",
+            "github": "https://github.com",
+            "whatsapp": "https://web.whatsapp.com",
+            "claude": "https://claude.ai",
+            "gemini": "https://gemini.google.com",
+            "chatgpt": "https://chatgpt.com",
+            "gpt": "https://chatgpt.com",
+            "instagram": "https://www.instagram.com",
+            "insta": "https://www.instagram.com",
+            "yt": "https://www.youtube.com",
+        }
+        for command, expected_url in cases.items():
+            with self.subTest(command=command):
+                result = process_command(command)
+                self.assertEqual(result["status"], "action")
+                self.assertEqual(result["action"]["url"], expected_url)
+
+    def test_one_word_keyword_accepts_the_wake_word(self):
+        result = process_command("Alexa, gmail")
+        self.assertEqual(result["action"]["url"], "https://mail.google.com")
+
+    def test_keyword_only_matches_a_whole_sentence(self):
+        """A keyword inside a sentence must not hijack the conversation."""
+        for sentence in ("gmail is slow today", "my insta feed is boring", "i love youtube"):
+            with self.subTest(sentence=sentence):
+                self.assertNotEqual(process_command(sentence)["status"], "action")
+
+    def test_open_phrases_and_aliases_still_work(self):
+        cases = {
+            "open classroom": "https://classroom.google.com",
+            "open drive": "https://drive.google.com",
+            "open claude": "https://claude.ai",
+            "open email": "https://mail.google.com",
+            "open youtube": "https://www.youtube.com",
+        }
+        for command, expected_url in cases.items():
+            with self.subTest(command=command):
+                self.assertEqual(process_command(command)["action"]["url"], expected_url)
+
     def test_settings_explains_browser_limitation(self):
         result = process_command("open settings")
         self.assertEqual(result["status"], "unsupported")

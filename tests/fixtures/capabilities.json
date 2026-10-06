@@ -3,7 +3,7 @@
     {
       "id": "launch",
       "label": "Open a site",
-      "hint": "Jump straight to a site I already know.",
+      "hint": "One app at a time: say \"open YouTube\" or just the one-word keyword \"youtube\".",
       "items": [
         {
           "label": "YouTube",
@@ -58,6 +58,31 @@
         {
           "label": "Instagram",
           "command": "open instagram",
+          "icon": "camera"
+        },
+        {
+          "label": "Keyword: drive",
+          "command": "drive",
+          "icon": "drive"
+        },
+        {
+          "label": "Keyword: classroom",
+          "command": "classroom",
+          "icon": "book"
+        },
+        {
+          "label": "Keyword: gmail",
+          "command": "gmail",
+          "icon": "mail"
+        },
+        {
+          "label": "Keyword: whatsapp",
+          "command": "whatsapp",
+          "icon": "chat"
+        },
+        {
+          "label": "Keyword: insta",
+          "command": "insta",
           "icon": "camera"
         }
       ]
