@@ -20,10 +20,13 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote_plus, unquote, urlsplit
 
+import conversation
+
 ROOT = Path(__file__).resolve().parent
 STATIC_ROOT = ROOT / "static"
 MAX_REQUEST_BYTES = 16_384
 MAX_COMMAND_LENGTH = 1_000
+MAX_SESSION_LENGTH = 128
 
 
 def _clean_command(command: str) -> str:
@@ -118,12 +121,17 @@ CAPABILITIES: tuple[dict[str, object], ...] = (
     {
         "id": "chat",
         "label": "Just talk",
-        "hint": "Greetings, help, the time and the date.",
+        "hint": "Real back-and-forth: feelings, jokes, facts, memory of this chat.",
         "items": (
             {"label": "Say hello", "command": "hello", "icon": "wave"},
             {"label": "What can you do", "command": "help", "icon": "info"},
+            {"label": "Tell me a joke", "command": "tell me a joke", "icon": "spark"},
+            {"label": "I'm tired", "command": "i am tired", "icon": "chat"},
+            {"label": "Flip a coin", "command": "flip a coin", "icon": "play"},
+            {"label": "Do some maths", "command": "what is 12 * 8", "icon": "info"},
             {"label": "The time", "command": "what time is it", "icon": "clock"},
             {"label": "Today's date", "command": "what is todays date", "icon": "calendar"},
+            {"label": "What did I ask", "command": "what did i ask", "icon": "chat"},
         ),
     },
 )
@@ -348,6 +356,24 @@ def process_command(command: str) -> dict[str, object]:
     )
 
 
+# One engine for the process: it owns the per-session conversation memory.
+ENGINE = conversation.ConversationEngine(
+    intent_handler=process_command,
+    normalize=_clean_command,
+    llm=conversation.LlmChat.from_env(),
+)
+
+
+def handle_command(command: str, session_id: str | None = None) -> dict[str, object]:
+    """Conversational entry point used by the HTTP API (keeps session memory)."""
+    return ENGINE.respond(command, session_id)
+
+
+def reset_session(session_id: str | None = None) -> None:
+    """Forget a conversation, e.g. when the user clears the log."""
+    ENGINE.sessions.reset(session_id)
+
+
 class AssistantRequestHandler(BaseHTTPRequestHandler):
     """Serve the single-page frontend and its small JSON API."""
 
@@ -399,7 +425,8 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
         )
 
     def do_POST(self) -> None:  # noqa: N802 - method name required by BaseHTTPRequestHandler
-        if urlsplit(self.path).path != "/api/command":
+        route = urlsplit(self.path).path
+        if route not in {"/api/command", "/api/reset"}:
             self._send_json({"error": "Not found"}, 404)
             return
 
@@ -413,11 +440,26 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
             return
 
         try:
-            payload = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            raw = self.rfile.read(content_length).decode("utf-8") if content_length else "{}"
+            payload = json.loads(raw or "{}")
         except (UnicodeDecodeError, json.JSONDecodeError):
             self._send_json({"error": "Expected a JSON request body"}, 400)
             return
-        if not isinstance(payload, dict) or not isinstance(payload.get("command"), str):
+        if not isinstance(payload, dict):
+            self._send_json({"error": "Expected a JSON object"}, 400)
+            return
+
+        session_id = payload.get("session")
+        if session_id is not None and (not isinstance(session_id, str) or len(session_id) > MAX_SESSION_LENGTH):
+            self._send_json({"error": "The 'session' field must be a short string"}, 400)
+            return
+
+        if route == "/api/reset":
+            reset_session(session_id)
+            self._send_json({"status": "ok", "session": session_id or "anonymous"})
+            return
+
+        if not isinstance(payload.get("command"), str):
             self._send_json({"error": "The 'command' field must be a string"}, 400)
             return
 
@@ -426,7 +468,7 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
             self._send_json({"error": "Command is too long"}, 422)
             return
 
-        self._send_json(process_command(command))
+        self._send_json(handle_command(command, session_id))
 
 
 def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:

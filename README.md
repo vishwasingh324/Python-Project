@@ -32,19 +32,58 @@ Note: `0.0.0.0` is a *listen* address, not a browsable one — open `localhost`
 | --- | --- | --- |
 | `GET` | `/api/health` | Backend liveness — used by the UI's status dot. |
 | `GET` | `/api/commands` | Every command the assistant understands, grouped for the UI. |
-| `POST` | `/api/command` | `{"command": "open youtube"}` → `{reply, action, status, should_continue}`. |
+| `POST` | `/api/command` | `{"command": "open youtube", "session": "<id>"}` → `{reply, action, status, should_continue, session}`. |
+| `POST` | `/api/reset` | `{"session": "<id>"}` → forgets that conversation (used by the Clear button). |
 
 The frontend renders its quick-launch buttons, capability cards and suggestion
 chips straight from `/api/commands`, so the UI can never drift away from what the
 backend actually supports. A test asserts every offered example resolves to a
 real intent.
 
+## Talking to it
+
+The assistant holds a normal conversation, not just commands:
+
+- **Small talk** — greetings, "how are you", "are you an AI?", "who made you",
+  feelings ("I'm tired" gets a real answer), praise, apologies, jokes, facts,
+  "can you sing?", "what's the meaning of life".
+- **Little utilities** — "flip a coin", "roll a dice", "pick a random number",
+  safe arithmetic like "what is 12 * 8" (parsed with `ast`, never `eval`).
+- **Session memory** — it remembers the current chat, so follow-ups work:
+  "open **it**", "search that", "play it", "**again**", "what did I ask?",
+  "what did you say?", "what have we talked about?".
+- **No dead ends** — an unrecognised sentence is answered in prose. Questions
+  come with a ready-to-click web search; statements get a friendly reply plus an
+  optional search link. Nothing says "Command not recognized" any more.
+
+Conversations are keyed by a `session` id the frontend generates and stores in
+`localStorage`, kept in memory with a two-hour idle timeout, and dropped when you
+press **Clear**.
+
+### Real language-model chat (optional)
+
+For open-ended answers, point it at an LLM — it is entirely optional and off by
+default:
+
+```bash
+export ALEXA_LLM_PROVIDER=anthropic      # or openai (auto-detected from the key)
+export ANTHROPIC_API_KEY=sk-ant-...      # or OPENAI_API_KEY=sk-...
+export ALEXA_LLM_MODEL=claude-3-5-haiku-latest   # optional
+python backend.py
+```
+
+Free-form sentences are then answered by the model with the conversation history
+as context. Commands, greetings and the time are still handled locally, so
+nothing breaks when there is no key, no network, or the API call fails — it
+quietly falls back to the local answers. Keys are read from the environment only;
+none are ever stored in the repository.
+
 ## What you can say
 
 - **Open a site:** "open YouTube", "open Google Classroom", "open Drive", "open Claude", "open Gemini", "open Google", "open GitHub", "open WhatsApp", "open Gmail", "open ChatGPT", "open Instagram".
 - **YouTube:** "play lofi beats on YouTube" or "open YouTube and play lofi beats".
 - **Web search:** "search for Python tutorials".
-- **Conversation:** "hi", "how are you", "what's your name", "thanks", "help" (lists these commands), "what time is it", "what's the date".
+- **Conversation:** "hi", "how are you", "tell me a joke", "I'm tired", "flip a coin", "what is 12 * 8", "thanks", "help", "what time is it", "what's the date".
 - **End the session:** "stop", "exit", "quit", "bye", "good night".
 
 ## The frontend

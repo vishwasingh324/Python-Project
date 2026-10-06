@@ -109,7 +109,7 @@
     {
       "id": "chat",
       "label": "Just talk",
-      "hint": "Greetings, help, the time and the date.",
+      "hint": "Real back-and-forth: feelings, jokes, facts, memory of this chat.",
       "items": [
         {
           "label": "Say hello",
@@ -122,6 +122,26 @@
           "icon": "info"
         },
         {
+          "label": "Tell me a joke",
+          "command": "tell me a joke",
+          "icon": "spark"
+        },
+        {
+          "label": "I'm tired",
+          "command": "i am tired",
+          "icon": "chat"
+        },
+        {
+          "label": "Flip a coin",
+          "command": "flip a coin",
+          "icon": "play"
+        },
+        {
+          "label": "Do some maths",
+          "command": "what is 12 * 8",
+          "icon": "info"
+        },
+        {
           "label": "The time",
           "command": "what time is it",
           "icon": "clock"
@@ -130,6 +150,11 @@
           "label": "Today's date",
           "command": "what is todays date",
           "icon": "calendar"
+        },
+        {
+          "label": "What did I ask",
+          "command": "what did i ask",
+          "icon": "chat"
         }
       ]
     }

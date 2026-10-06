@@ -55,7 +55,20 @@
   };
 
   /* ───────────────────────────── app state ───────────────────────────── */
+  function loadSessionId() {
+    try {
+      const existing = localStorage.getItem("backend.session");
+      if (existing) return existing;
+    } catch (_error) { /* storage may be unavailable */ }
+    const fresh = (window.crypto && window.crypto.randomUUID)
+      ? window.crypto.randomUUID()
+      : `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    try { localStorage.setItem("backend.session", fresh); } catch (_error) { /* optional */ }
+    return fresh;
+  }
+
   const state = {
+    session: loadSessionId(),
     status: "ready",
     listening: false,
     busy: false,
@@ -77,12 +90,13 @@
   };
 
   const stateCopy = {
-    ready: ["Ready to help", "Ready when you are", "Tap the microphone and say something like “open YouTube”, or type below.", "TAP TO SPEAK"],
+    ready: ["Ready to help", "Ready when you are", "Talk to me like a person — “hi”, “tell me a joke”, “I\u2019m tired” — or ask me to open something.", "TAP TO SPEAK"],
     listening: ["Listening now", "Go ahead, I'm listening", "Say your command clearly — I'll send it as soon as you stop.", "LISTENING"],
     thinking: ["Working on it", "One moment…", "Asking the backend what to do.", "THINKING"],
     offline: ["Backend offline", "I can't reach the backend", "The Python server isn't responding. Start it with “python backend.py”, then try again.", "OFFLINE"],
     stopped: ["Session paused", "Until next time", "Send “hello” whenever you want to start again.", "TAP TO SPEAK"],
     error: ["Voice problem", "Voice input hit a snag", "Check the voice panel for the exact reason — typing always works.", "VOICE ERROR"],
+    chat: ["Chatting", "Listening to you", "Ask me anything — I\u2019ll reply in prose and offer a search when I don\u2019t know.", "TAP TO SPEAK"],
   };
 
   /* ───────────────────────────── small helpers ───────────────────────────── */
@@ -240,6 +254,22 @@
     }
   }
 
+  const statusLabels = {
+    action: "opened a link",
+    smalltalk: "chat",
+    chat: "chat",
+    chat_llm: "chat · model",
+    search_suggested: "suggested a search",
+    recall: "remembered",
+    followup: "follow-up",
+    time: "answered",
+    help: "help",
+    unsupported: "not supported here",
+    unknown: "didn't understand",
+    empty: "empty",
+    stopped: "session ended",
+  };
+
   function updateCount() {
     els.countBadge.textContent = String(state.commandCount);
     els.navCount.textContent = String(state.commandCount);
@@ -285,14 +315,14 @@
       const response = await fetch("/api/command", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ command }),
+        body: JSON.stringify({ command, session: state.session }),
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(result.error || `Request failed (${response.status})`);
       removeTyping();
       appendMessage("assistant", result.reply || "I'm ready for another command.", {
         action: result.action,
-        status: result.status,
+        status: statusLabels[result.status] || result.status,
       });
       markHealthy();
       setStatus(result.status === "stopped" ? "stopped" : "ready");
@@ -833,6 +863,13 @@
   });
 
   els.clearLog.addEventListener("click", () => {
+    // Forget the conversation server-side too, so follow-ups like "open it"
+    // can't refer to links that are no longer on screen.
+    fetch("/api/reset", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session: state.session }),
+    }).catch(() => {});
     els.conversation.replaceChildren(els.emptyState);
     els.emptyState.hidden = false;
     state.commandCount = 0;

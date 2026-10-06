@@ -47,17 +47,27 @@ class FakeRecognition {
 window.SpeechRecognition = FakeRecognition;
 
 const calls = [];
+let lastSession = null;
 window.fetch = async (url, options = {}) => {
   calls.push({ url, body: options.body });
   const json = (data) => ({ ok: true, status: 200, json: async () => data });
   if (url === "/api/health") return json({ status: "ok", assistant: "Alexa" });
   if (url === "/api/commands") return json(CAPABILITIES);
+  if (url === "/api/reset") return json({ status: "ok" });
   if (url === "/api/command") {
-    const command = JSON.parse(options.body).command;
+    const payload = JSON.parse(options.body);
+    const command = payload.command;
+    lastSession = payload.session;
     if (/open youtube/.test(command)) {
-      return json({ command, reply: "Opening YouTube.", action: { label: "Open YouTube", url: "https://www.youtube.com" }, status: "action", should_continue: true });
+      return json({ command, session: payload.session, reply: "Opening YouTube.", action: { label: "Open YouTube", url: "https://www.youtube.com" }, status: "action", should_continue: true });
     }
-    return json({ command, reply: "I don't know that one yet.", action: null, status: "unknown", should_continue: true });
+    if (/^tell me a joke$/.test(command)) {
+      return json({ command, session: payload.session, reply: "Why did the Python programmer need glasses? Because they couldn't C.", action: null, status: "chat", should_continue: true });
+    }
+    if (/^open it$/.test(command)) {
+      return json({ command, session: payload.session, reply: "Opening that link.", action: { label: "Open YouTube", url: "https://www.youtube.com" }, status: "followup", should_continue: true });
+    }
+    return json({ command, session: payload.session, reply: "I'm not sure what to do with that yet.", action: null, status: "chat", should_continue: true });
   }
   return { ok: false, status: 404, json: async () => ({}) };
 };
@@ -124,9 +134,27 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   check("diagnostics mention the frame limit", /frame/i.test(doc.getElementById("check-list").textContent));
   check("diagnostics report the error", /not-allowed/i.test(doc.getElementById("check-list").textContent));
 
+  // normal conversation: a plain sentence gets a prose reply, not a dead end
+  input.value = "tell me a joke";
+  doc.getElementById("command-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+  await wait(150);
+  const chatReply = doc.querySelector("#conversation .message-assistant:last-of-type .message-text");
+  check("conversational command gets a prose reply", !!chatReply && chatReply.textContent.length > 10);
+  check("chat status is labelled for the user", doc.querySelector("#conversation .message-assistant:last-of-type .tag").textContent === "chat");
+  check("commands carry a session id", typeof lastSession === "string" && lastSession.length > 0);
+
+  // follow-up memory: "open it" reuses the earlier link
+  input.value = "open it";
+  doc.getElementById("command-form").dispatchEvent(new window.Event("submit", { bubbles: true, cancelable: true }));
+  await wait(150);
+  const followLink = doc.querySelector("#conversation .message-assistant:last-of-type .message-action");
+  check("follow-up reuses the remembered link", !!followLink && followLink.getAttribute("href") === "https://www.youtube.com");
+  check("follow-up status is labelled", doc.querySelector("#conversation .message-assistant:last-of-type .tag").textContent === "follow-up");
+
   click("#clear-log");
-  await wait(60);
+  await wait(80);
   check("clear empties the conversation", doc.querySelectorAll("#conversation .message").length === 0);
+  check("clear also resets the session server-side", calls.some((call) => call.url === "/api/reset"));
 
   console.log("\n--- captured problems ---");
   console.log(problems.length ? problems.join("\n") : "none");

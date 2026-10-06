@@ -1,10 +1,12 @@
 import json
+import random
 import unittest
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-from backend import capabilities, process_command
+from backend import _clean_command, capabilities, process_command
+from conversation import ConversationEngine
 
 
 class ProcessCommandTests(unittest.TestCase):
@@ -131,13 +133,24 @@ class CapabilitiesTests(unittest.TestCase):
             self.assertTrue(category["items"])
 
     def test_every_offered_example_is_understood(self):
-        """The UI renders these straight from the API, so they must all work."""
+        """The UI renders these straight from the API, so they must all work.
+
+        Checked through the full conversation engine, because the "Just talk"
+        entries are answered by the conversational layer rather than by
+        process_command directly.
+        """
+        engine = ConversationEngine(
+            intent_handler=process_command,
+            normalize=_clean_command,
+            rng=random.Random(0),
+        )
         for category in capabilities()["categories"]:
             for item in category["items"]:
                 with self.subTest(category=category["id"], command=item["command"]):
-                    result = process_command(item["command"])
+                    result = engine.respond(item["command"], f"cap-{category['id']}")
                     self.assertNotEqual(result["status"], "unknown", f"{item['command']!r} is not understood")
                     self.assertNotEqual(result["status"], "empty")
+                    self.assertTrue(result["reply"], f"{item['command']!r} produced no reply")
 
     def test_capabilities_returns_copies(self):
         first = capabilities()
