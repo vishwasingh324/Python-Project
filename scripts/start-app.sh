@@ -16,5 +16,9 @@ if (ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | grep -q ":${PORT} "; then
 fi
 
 cd "${REPO_DIR}"
-echo "Starting the assistant on http://0.0.0.0:${PORT} ..."
+# 0.0.0.0 means "listen on all interfaces" so the sandbox preview proxy can
+# reach it -- it is NOT a browsable address. Open localhost:PORT locally, or the
+# forwarded preview link for this port in a hosted environment.
+echo "Starting the assistant, listening on 0.0.0.0:${PORT} (all interfaces) ..."
+echo "Open http://localhost:${PORT} on this machine, or the preview link for port ${PORT}."
 exec python backend.py --port "${PORT}"

@@ -252,7 +252,12 @@ class AssistantRequestHandler(BaseHTTPRequestHandler):
 def run_server(host: str = "0.0.0.0", port: int = 8000) -> None:
     """Start the frontend and API on one origin."""
     server = ThreadingHTTPServer((host, port), AssistantRequestHandler)
-    print(f"Backend assistant is running at http://{host}:{port}")
+    # 0.0.0.0 is a "listen on every interface" bind address; it is not a
+    # browsable address, so show something clickable instead.
+    display_host = "localhost" if host in {"0.0.0.0", "::", ""} else host
+    print(f"Backend assistant is listening on {host}:{port}")
+    print(f"Open http://{display_host}:{port} in a browser on this machine.")
+    print("(In a hosted sandbox, open the forwarded preview link for this port instead.)")
     print("Press Ctrl+C to stop the server.")
     try:
         server.serve_forever()

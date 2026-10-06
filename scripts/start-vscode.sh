@@ -89,7 +89,8 @@ auth: none
 cert: false
 YAML
 
-echo "Starting VS Code on http://0.0.0.0:${PORT} (folder: ${REPO_DIR}) ..."
+echo "Starting VS Code, listening on 0.0.0.0:${PORT} (all interfaces; folder: ${REPO_DIR}) ..."
+echo "Open the forwarded preview link for port ${PORT} (there is no login screen)."
 cd "${REPO_DIR}"
 exec node "${CS_DIR}/out/node/entry.js" \
   --config /tmp/cs-config/config.yaml \
