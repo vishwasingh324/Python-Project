@@ -98,7 +98,10 @@ none are ever stored in the repository.
   | ChatGPT | `chatgpt` (also `gpt`) |
   | Instagram | `instagram` (also `insta`) |
 
-  Each keyword launches exactly one app — nothing opens in bulk. A keyword only
+  Each keyword launches exactly one app — nothing opens in bulk, and the app
+  opens **automatically** in a new tab: you say it, it appears, no button in
+  between. (Browsers may ask you to allow pop-ups for this page the first time;
+  allow them, or use the fallback link in the chat.) A keyword only
   counts when it is the whole sentence, so "gmail is slow today" stays
   conversation instead of hijacking the chat and opening a tab.
 - **YouTube:** "play lofi beats on YouTube" or "open YouTube and play lofi beats".
@@ -118,8 +121,11 @@ none are ever stored in the repository.
   `Esc` cancels listening, `↑`/`↓` walk back through your command history.
   Focusing the input also scrolls the conversation into view if a short window
   had pushed it off screen.
-- **Conversation log** with timestamps, the backend's `status` for each reply, a
-  copy button, and a clickable **Open …** link when the backend returned an action.
+- **Conversation log** with timestamps, the backend's `status` for each reply, and
+  a copy button. When a command opens something, the site opens **by itself** in a
+  new tab the moment the reply arrives — there is no "Open …" button to press.
+  Only if the browser blocks the pop-up does the bubble fall back to a link, and
+  it says so (*"Open YouTube — pop-up blocked, open it here"*).
 - **Spoken replies** are opt-in via the *Sound* toggle in the top bar.
 - **Voice check** (sidebar, or the badge in the hero panel) explains voice
   problems: secure context, browser support, whether the page is embedded in a
