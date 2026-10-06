@@ -12,6 +12,14 @@ python backend.py
 
 Then open [http://localhost:8000](http://localhost:8000). To change the port, run `python backend.py --port 8080` (or set `PORT`). For a terminal-only version, run `python backend.py --cli`.
 
+## What you can say
+
+- **Open a site:** "open YouTube", "open Google Classroom", "open Drive", "open Claude", "open Gemini", "open Google", "open GitHub", "open WhatsApp", "open Gmail", "open ChatGPT", "open Instagram".
+- **YouTube:** "play lofi beats on YouTube" or "open YouTube and play lofi beats".
+- **Web search:** "search for Python tutorials".
+- **Conversation:** "hi", "how are you", "what's your name", "thanks", "help" (lists these commands), "what time is it", "what's the date".
+- **End the session:** "stop", "exit", "quit", "bye", "good night".
+
 ## Voice and links
 
 - Voice capture and spoken replies use your browser's speech APIs. Chrome or Edge on `localhost` or HTTPS is recommended. If voice capture is unavailable, typed commands still work.

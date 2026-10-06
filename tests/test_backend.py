@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 from urllib.parse import parse_qs, urlsplit
 
 from backend import process_command
@@ -59,9 +60,52 @@ class ProcessCommandTests(unittest.TestCase):
         self.assertIsNone(result["action"])
 
     def test_unrecognized_command_has_no_action(self):
-        result = process_command("what time is it")
+        result = process_command("make me a sandwich")
         self.assertEqual(result["status"], "unknown")
         self.assertIsNone(result["action"])
+
+    def test_greetings_are_answered(self):
+        for command in ("Hi", "hello", "hey there", "good morning", "whats up", "hi alexa"):
+            with self.subTest(command=command):
+                result = process_command(command)
+                self.assertEqual(result["status"], "smalltalk")
+                self.assertIsNone(result["action"])
+                self.assertTrue(result["should_continue"])
+
+    def test_greeting_does_not_swallow_a_real_command(self):
+        result = process_command("hello, open youtube")
+        self.assertEqual(result["status"], "action")
+        self.assertEqual(result["action"]["url"], "https://www.youtube.com")
+
+    def test_small_talk(self):
+        for command in ("how are you", "what is your name", "who are you", "thanks", "thank you so much"):
+            with self.subTest(command=command):
+                result = process_command(command)
+                self.assertEqual(result["status"], "smalltalk")
+                self.assertTrue(result["reply"])
+
+    def test_help_lists_capabilities(self):
+        for command in ("help", "what can you do", "what can i say"):
+            with self.subTest(command=command):
+                result = process_command(command)
+                self.assertEqual(result["status"], "help")
+                self.assertIn("youtube", result["reply"].lower())
+
+    def test_time_and_date_commands(self):
+        for command in ("what time is it", "whats the time", "what is todays date", "what day is it"):
+            with self.subTest(command=command):
+                result = process_command(command)
+                self.assertEqual(result["status"], "time")
+                self.assertIsNone(result["action"])
+        self.assertIn(":", process_command("what time is it")["reply"])
+        self.assertIn(str(datetime.now().year), process_command("whats todays date")["reply"])
+
+    def test_goodbye_ends_session(self):
+        for command in ("bye", "goodbye", "see you", "good night"):
+            with self.subTest(command=command):
+                result = process_command(command)
+                self.assertEqual(result["status"], "stopped")
+                self.assertFalse(result["should_continue"])
 
 
 if __name__ == "__main__":

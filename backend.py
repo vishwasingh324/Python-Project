@@ -15,6 +15,7 @@ import os
 import re
 import sys
 import webbrowser
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote_plus, unquote, urlsplit
@@ -28,7 +29,53 @@ MAX_COMMAND_LENGTH = 1_000
 def _clean_command(command: str) -> str:
     """Normalize text and strip the optional Alexa wake word."""
     command = re.sub(r"\balexa\b", " ", command, flags=re.IGNORECASE)
+    # Speech and quick typing often drop apostrophes ("whats the time"), so
+    # remove them before matching and write patterns without them.
+    command = command.replace("'", "").replace("\u2019", "")
     return " ".join(command.lower().split()).strip(" ,.!?\t\n")
+
+
+# Conversation patterns. These are anchored so that a greeting only matches on
+# its own ("hello") and never swallows a real command ("hello, open youtube"
+# still opens YouTube). Patterns are written without apostrophes because
+# _clean_command strips them.
+_GREETING = re.compile(
+    r"^(?:good (?:morning|afternoon|evening)|hello|hi+|hey+|yo|hola|namaste|what(?:s| is) up)"
+    r"(?: there| alexa| assistant| buddy| friend)?$"
+)
+_GOODBYE = re.compile(
+    r"^(?:bye+(?: bye)?|good ?bye|see (?:you|ya)|good night|catch you later|i(?:m| am) done)$"
+)
+_HOW_ARE_YOU = re.compile(r"\bhow (?:are you|are things|is it going|you doing|are you doing)\b")
+_IDENTITY = re.compile(r"\b(?:who are you|what(?:s| is) your name|your name)\b")
+_THANKS = re.compile(
+    r"^(?:thanks|thank you|thankyou|thanx|thx|ty|great|awesome|nice|cool)"
+    r"(?: a lot| so much| very much| man| bro)?$"
+)
+_HELP = re.compile(
+    r"^(?:help|help me|commands?|what can you do|what do you do|"
+    r"what can i (?:do|say|ask)|show me (?:the )?commands?)$"
+)
+_TIME = re.compile(
+    r"\b(?:what(?:s| is) the time|what time is it|current time|time now|tell me the time|clock)\b"
+)
+_DATE = re.compile(
+    r"\b(?:what(?:s| is) the date|what(?:s| is) todays? date|what day is it|"
+    r"todays? date|current date|what(?:s| is) the day)\b"
+)
+
+
+_HELP_REPLY = (
+    "I can open sites and search for you. Try: 'open YouTube', "
+    "'play lofi beats on YouTube', 'search for Python tutorials', 'open Gmail', "
+    "'open Google Classroom', 'open GitHub', or ask me for the time. "
+    "Say 'stop' to end the session."
+)
+
+
+def _time_and_date(now: datetime) -> str:
+    time_text = now.strftime("%I:%M %p").lstrip("0")
+    return f"{time_text} on {now:%A}, {now.day} {now:%B %Y}"
 
 
 def _action(label: str, url: str) -> dict[str, str]:
@@ -77,6 +124,63 @@ def process_command(command: str) -> dict[str, object]:
             "Goodbye. I'm here whenever you want to start again.",
             status="stopped",
             should_continue=False,
+        )
+
+    # Small talk first: these are anchored matches, so real commands such as
+    # "hello, open youtube" still fall through to the action handlers below.
+    if _GOODBYE.match(normalized):
+        return _response(
+            original,
+            "Goodbye. I'm here whenever you want to start again.",
+            status="stopped",
+            should_continue=False,
+        )
+
+    if _GREETING.match(normalized):
+        return _response(
+            original,
+            "Hello! How can I help you? You can say things like 'open YouTube' "
+            "or 'search for Python tutorials', or just ask 'help'.",
+            status="smalltalk",
+        )
+
+    if _HOW_ARE_YOU.search(normalized):
+        return _response(
+            original,
+            "I'm running well, thank you for asking. What can I do for you?",
+            status="smalltalk",
+        )
+
+    if _IDENTITY.search(normalized):
+        return _response(
+            original,
+            "I'm Alexa, your voice assistant in this browser. I can open sites "
+            "and run searches for you.",
+            status="smalltalk",
+        )
+
+    if _THANKS.match(normalized):
+        return _response(
+            original,
+            "You're welcome! Anything else I can do?",
+            status="smalltalk",
+        )
+
+    if _HELP.match(normalized):
+        return _response(original, _HELP_REPLY, status="help")
+
+    if _TIME.search(normalized):
+        return _response(
+            original,
+            f"It's {_time_and_date(datetime.now())}.",
+            status="time",
+        )
+
+    if _DATE.search(normalized):
+        return _response(
+            original,
+            f"Today is {datetime.now():%A}, {datetime.now().day} {datetime.now():%B %Y}.",
+            status="time",
         )
 
     if "open google classroom" in normalized:
@@ -167,7 +271,8 @@ def process_command(command: str) -> dict[str, object]:
 
     return _response(
         original,
-        "Command not recognized. Try one of the quick commands or ask me to search the web.",
+        "I don't know that one yet. Try 'open YouTube', 'play lofi beats on YouTube', "
+        "'search for Python tutorials', or say 'help' to hear what I can do.",
         status="unknown",
     )
 
