@@ -144,6 +144,10 @@ const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
   await wait(120);
   check("voice failure explained", !doc.getElementById("status-fix").hidden);
   check("blames the embedded preview", /embedded preview/i.test(doc.getElementById("status-fix-text").textContent));
+  check("retry button exists", !!doc.getElementById("fix-retry"));
+  check("voice typing button exists", !!doc.getElementById("fix-dictate"));
+  click("#fix-dictate");
+  check("clicking voice typing focuses input", doc.activeElement === input);
 
   click("#voice-check");
   await wait(120);
